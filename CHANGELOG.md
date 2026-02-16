@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2025-02-16
+
+### Added
+- Image hosting tier scoring: blossom (best) > own domain (root NIP-05) > third-party (warn) > broken (fail)
+- Root NIP-05 detection (`_@domain` or bare domain) shown as `(root)` in check output
+- Picture and banner each count toward health score (max score now 8)
+
+### Fixed
+- Bare domain NIP-05 (e.g. `dergigi.com`) now resolves correctly as `_@domain`
+
 ## [0.3.0] - 2025-02-16
 
 ### Added
