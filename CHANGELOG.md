@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2025-02-16
+
+### Added
+- `--quiet` / `-q` flag for agent-friendly silent mode (setup and check)
+- Parallel relay fetching in `nihao check` for faster health checks
+
+### Fixed
+- README health score range corrected from 0–6 to 0–8
+
 ## [0.4.0] - 2025-02-16
 
 ### Added

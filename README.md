@@ -52,6 +52,7 @@ Override with `--relays wss://my.relay,wss://other.relay`.
 - [x] Randomized multilingual greeting (26 languages)
 - [x] Parallel relay publishing
 - [x] `--json` output for agent consumption
+- [x] `--quiet` mode for agent consumption
 - [ ] NIP-60 Cashu wallet setup
 - [ ] NIP-05 setup assistance
 
@@ -65,7 +66,9 @@ Override with `--relays wss://my.relay,wss://other.relay`.
 - [x] Follow list (kind 3)
 - [x] NIP-60 wallet detection (kind 37375)
 - [x] Health score (0–8)
+- [x] Parallel relay fetching
 - [x] `--json` output
+- [x] `--quiet` mode for agent consumption
 - [x] Meaningful exit codes (0 = healthy, 1 = issues found)
 - [ ] Relay quality analysis
 - [ ] Dynamic relay discovery (NIP-66 relay monitors)
