@@ -22,7 +22,6 @@ var version = "dev"
 //   damus, primal, nos.lol — large, long-running, well-connected
 // Specialized relays (important for discoverability):
 //   purplepag.es — NIP-65 relay list aggregator, critical for outbox model
-//   relay.nostr.band — indexing relay, good for search/discoverability
 //
 // Future: discover relays dynamically via NIP-66 relay monitors or by
 // sampling kind 10002 lists from well-connected npubs.
@@ -31,7 +30,6 @@ var defaultRelays = []string{
 	"wss://relay.primal.net",
 	"wss://nos.lol",
 	"wss://purplepag.es",
-	"wss://relay.nostr.band",
 }
 
 func main() {
