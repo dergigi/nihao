@@ -95,7 +95,13 @@ func runCheck(target string, jsonOutput bool) {
 		// Check 2: NIP-05
 		if meta.NIP05 != "" {
 			if verifyNIP05(ctx, meta.NIP05, pk) {
-				result.addCheck("nip05", "pass", meta.NIP05)
+				// Check for root NIP-05 (_@domain)
+				nip05Display := meta.NIP05
+				isRoot := isRootNIP05(meta.NIP05)
+				if isRoot {
+					nip05Display += " (root)"
+				}
+				result.addCheck("nip05", "pass", nip05Display)
 				result.Score++
 			} else {
 				result.addCheck("nip05", "warn", fmt.Sprintf("%s (set but doesn't resolve)", meta.NIP05))
@@ -421,6 +427,17 @@ func checkProfileImages(ctx context.Context, result *CheckResult, picture, banne
 
 		result.addCheck(img.name, status, strings.Join(parts, ", "))
 	}
+}
+
+// isRootNIP05 checks if a NIP-05 identifier uses the root _ name,
+// meaning the user controls the domain (e.g. _@fiatjaf.com or just fiatjaf.com).
+func isRootNIP05(nip05 string) bool {
+	if !strings.Contains(nip05, "@") {
+		// bare domain like "fiatjaf.com" is treated as _@fiatjaf.com
+		return true
+	}
+	parts := strings.SplitN(nip05, "@", 2)
+	return parts[0] == "_"
 }
 
 func printCheckResult(r CheckResult) {
