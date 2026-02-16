@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -96,6 +97,14 @@ func runSetup(args []string) {
 			fatal("invalid secret key: %s", err)
 		}
 		fmt.Println("🔑 Using provided secret key")
+	} else if hasStdin() {
+		line := readStdin()
+		var err error
+		sk, err = parseSecretKey(strings.TrimSpace(line))
+		if err != nil {
+			fatal("invalid secret key from stdin: %s", err)
+		}
+		fmt.Println("🔑 Using secret key from stdin")
 	} else {
 		sk = nostr.Generate()
 		fmt.Println("🔑 Generated new keypair")
@@ -356,6 +365,22 @@ func parseSetupFlags(args []string) setupOpts {
 		}
 	}
 	return opts
+}
+
+func hasStdin() bool {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return (fi.Mode() & os.ModeCharDevice) == 0
+}
+
+func readStdin() string {
+	scanner := bufio.NewScanner(os.Stdin)
+	if scanner.Scan() {
+		return scanner.Text()
+	}
+	return ""
 }
 
 func fatal(format string, args ...any) {
