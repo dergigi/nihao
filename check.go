@@ -30,7 +30,7 @@ type CheckItem struct {
 	Detail string `json:"detail,omitempty"`
 }
 
-func runCheck(target string, jsonOutput bool) {
+func runCheck(target string, jsonOutput bool, quiet bool) {
 	if target == "" {
 		fatal("usage: nihao check <npub|hex>")
 	}
@@ -41,7 +41,7 @@ func runCheck(target string, jsonOutput bool) {
 	}
 
 	npub := nip19.EncodeNpub(pk)
-	if !jsonOutput {
+	if !jsonOutput && !quiet {
 		fmt.Printf("nihao check 🔍 %s\n\n", npub)
 	}
 
@@ -192,14 +192,11 @@ func runCheck(target string, jsonOutput bool) {
 	if jsonOutput {
 		out, _ := json.MarshalIndent(result, "", "  ")
 		fmt.Println(string(out))
-		if result.Score < result.MaxScore {
-			os.Exit(1)
-		}
-	} else {
+	} else if !quiet {
 		printCheckResult(result)
-		if result.Score < result.MaxScore {
-			os.Exit(1)
-		}
+	}
+	if result.Score < result.MaxScore {
+		os.Exit(1)
 	}
 }
 

@@ -40,14 +40,17 @@ func main() {
 		case "check":
 			target := ""
 			jsonOutput := false
+			quiet := false
 			for _, a := range args[1:] {
 				if a == "--json" {
 					jsonOutput = true
+				} else if a == "--quiet" || a == "-q" {
+					quiet = true
 				} else if !strings.HasPrefix(a, "-") {
 					target = a
 				}
 			}
-			runCheck(target, jsonOutput)
+			runCheck(target, jsonOutput, quiet)
 			return
 		case "version", "--version":
 			fmt.Printf("nihao %s\n", version)
@@ -58,6 +61,7 @@ func main() {
 		}
 	}
 
+	// Check for --quiet in setup args
 	runSetup(args)
 }
 
@@ -78,11 +82,13 @@ SETUP FLAGS:
   --lud16 <user@domain>     Lightning address
   --relays <r1,r2,...>      Comma-separated relay URLs
   --json                    Output result as JSON
+  --quiet, -q               Suppress non-JSON, non-error output
   --sec <nsec|hex>          Use existing secret key instead of generating
   --stdin                   Read secret key from stdin (for piping)
 
 CHECK FLAGS:
   --json                    Output result as JSON
+  --quiet, -q               Suppress non-JSON, non-error output
 
 EXIT CODES:
   0                         Success (check: all checks pass)
@@ -92,8 +98,19 @@ EXIT CODES:
 func runSetup(args []string) {
 	opts := parseSetupFlags(args)
 
-	fmt.Println("nihao 👋")
-	fmt.Println()
+	log := func(format string, a ...any) {
+		if !opts.quiet {
+			fmt.Printf(format+"\n", a...)
+		}
+	}
+	logln := func(a ...any) {
+		if !opts.quiet {
+			fmt.Println(a...)
+		}
+	}
+
+	logln("nihao 👋")
+	logln()
 
 	// Step 1: Generate or load keypair
 	var sk nostr.SecretKey
@@ -103,7 +120,7 @@ func runSetup(args []string) {
 		if err != nil {
 			fatal("invalid secret key: %s", err)
 		}
-		fmt.Println("🔑 Using provided secret key")
+		logln("🔑 Using provided secret key")
 	} else if opts.stdin {
 		line := readStdin()
 		var err error
@@ -111,18 +128,18 @@ func runSetup(args []string) {
 		if err != nil {
 			fatal("invalid secret key from stdin: %s", err)
 		}
-		fmt.Println("🔑 Using secret key from stdin")
+		logln("🔑 Using secret key from stdin")
 	} else {
 		sk = generateKey()
-		fmt.Println("🔑 Generated new keypair")
+		logln("🔑 Generated new keypair")
 	}
 
 	pk := sk.Public()
 	nsec := nip19.EncodeNsec(sk)
 	npub := nip19.EncodeNpub(pk)
 
-	fmt.Printf("   npub: %s\n", npub)
-	fmt.Println()
+	log("   npub: %s", npub)
+	logln()
 
 	// Step 2: Build and publish profile metadata (kind 0)
 	name := opts.name
@@ -168,9 +185,9 @@ func runSetup(args []string) {
 		relays = opts.relays
 	}
 
-	fmt.Println("👤 Publishing profile metadata (kind 0)...")
-	publishToRelays(evt, relays)
-	fmt.Println()
+	logln("👤 Publishing profile metadata (kind 0)...")
+	publishToRelays(evt, relays, opts.quiet)
+	logln()
 
 	// Step 3: Publish relay list (kind 10002)
 	var relayTags nostr.Tags
@@ -186,9 +203,9 @@ func runSetup(args []string) {
 	}
 	relayEvt.Sign(sk)
 
-	fmt.Println("📡 Publishing relay list (kind 10002)...")
-	publishToRelays(relayEvt, relays)
-	fmt.Println()
+	logln("📡 Publishing relay list (kind 10002)...")
+	publishToRelays(relayEvt, relays, opts.quiet)
+	logln()
 
 	// Step 4: Publish empty follow list (kind 3)
 	followEvt := nostr.Event{
@@ -199,9 +216,9 @@ func runSetup(args []string) {
 	}
 	followEvt.Sign(sk)
 
-	fmt.Println("👥 Publishing follow list (kind 3)...")
-	publishToRelays(followEvt, relays)
-	fmt.Println()
+	logln("👥 Publishing follow list (kind 3)...")
+	publishToRelays(followEvt, relays, opts.quiet)
+	logln()
 
 	// Step 5: Say hello (kind 1)
 	greetings := []string{
@@ -271,13 +288,13 @@ func runSetup(args []string) {
 	}
 	helloEvt.Sign(sk)
 
-	fmt.Println("💬 Posting first note (kind 1)...")
-	publishToRelays(helloEvt, relays)
-	fmt.Println()
+	logln("💬 Posting first note (kind 1)...")
+	publishToRelays(helloEvt, relays, opts.quiet)
+	logln()
 
 	// Summary
-	fmt.Println("✅ Identity created!")
-	fmt.Println()
+	logln("✅ Identity created!")
+	logln()
 
 	if opts.jsonOutput {
 		result := SetupResult{
@@ -289,7 +306,7 @@ func runSetup(args []string) {
 		}
 		out, _ := json.MarshalIndent(result, "", "  ")
 		fmt.Println(string(out))
-	} else {
+	} else if !opts.quiet {
 		fmt.Println("   ┌─────────────────────────────────────────")
 		fmt.Printf("   │ npub: %s\n", npub)
 		fmt.Printf("   │ nsec: %s\n", nsec)
@@ -308,7 +325,8 @@ type publishResult struct {
 	err     string
 }
 
-func publishToRelays(evt nostr.Event, relays []string) {
+func publishToRelays(evt nostr.Event, relays []string, quiet ...bool) {
+	silent := len(quiet) > 0 && quiet[0]
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
 
@@ -344,10 +362,12 @@ func publishToRelays(evt nostr.Event, relays []string) {
 	}()
 
 	for r := range results {
-		if r.success {
-			fmt.Printf("   ✓ %s\n", r.url)
-		} else {
-			fmt.Printf("   ✗ %s (%s)\n", r.url, r.err)
+		if !silent {
+			if r.success {
+				fmt.Printf("   ✓ %s\n", r.url)
+			} else {
+				fmt.Printf("   ✗ %s (%s)\n", r.url, r.err)
+			}
 		}
 	}
 }
@@ -397,6 +417,7 @@ type setupOpts struct {
 	sec        string
 	stdin      bool
 	jsonOutput bool
+	quiet      bool
 }
 
 func parseSetupFlags(args []string) setupOpts {
@@ -445,6 +466,8 @@ func parseSetupFlags(args []string) setupOpts {
 			}
 		case "--json":
 			opts.jsonOutput = true
+		case "--quiet", "-q":
+			opts.quiet = true
 		case "--stdin":
 			opts.stdin = true
 		}
