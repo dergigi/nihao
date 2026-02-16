@@ -36,7 +36,7 @@ nihao check <npub>
 - [ ] npub.cash registration
 - [ ] NIP-05 setup assistance
 - [ ] Lightning address setup
-- [ ] Parallel relay publishing
+- [x] Parallel relay publishing
 
 ### Check (`nihao check <npub>`)
 
@@ -47,7 +47,8 @@ nihao check <npub>
 - [x] Follow list (kind 3)
 - [x] NIP-60 wallet detection
 - [x] Health score
-- [ ] `--json` output
+- [x] `--json` output
+- [x] Meaningful exit codes (0 = healthy, 1 = issues)
 - [ ] Relay quality analysis
 - [ ] Profile completeness breakdown
 
