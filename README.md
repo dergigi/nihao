@@ -33,9 +33,8 @@ nihao check <npub>
 - [x] Publish follow list (kind 3)
 - [x] `--json` output for agent consumption
 - [ ] NIP-60 Cashu wallet setup
-- [ ] npub.cash registration
+- [ ] Auto-set lud16 to `<npub>@npub.cash` (no registration needed)
 - [ ] NIP-05 setup assistance
-- [ ] Lightning address setup
 - [x] Parallel relay publishing
 
 ### Check (`nihao check <npub>`)
