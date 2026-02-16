@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -13,11 +14,11 @@ import (
 )
 
 type CheckResult struct {
-	Npub    string       `json:"npub"`
-	Pubkey  string       `json:"pubkey"`
-	Score   int          `json:"score"`
+	Npub     string      `json:"npub"`
+	Pubkey   string      `json:"pubkey"`
+	Score    int         `json:"score"`
 	MaxScore int         `json:"max_score"`
-	Checks  []CheckItem  `json:"checks"`
+	Checks   []CheckItem `json:"checks"`
 }
 
 type CheckItem struct {
@@ -26,7 +27,7 @@ type CheckItem struct {
 	Detail string `json:"detail,omitempty"`
 }
 
-func runCheck(target string) {
+func runCheck(target string, jsonOutput bool) {
 	if target == "" {
 		fatal("usage: nihao check <npub|hex>")
 	}
@@ -37,7 +38,9 @@ func runCheck(target string) {
 	}
 
 	npub := nip19.EncodeNpub(pk)
-	fmt.Printf("nihao check 🔍 %s\n\n", npub)
+	if !jsonOutput {
+		fmt.Printf("nihao check 🔍 %s\n\n", npub)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -49,7 +52,7 @@ func runCheck(target string) {
 	}
 
 	// Fetch profile (kind 0)
-	profile, profileEvt := fetchKind(ctx, pk, 0)
+	_, profileEvt := fetchKind(ctx, pk, 0)
 	if profileEvt != nil {
 		var meta ProfileMetadata
 		json.Unmarshal([]byte(profileEvt.Content), &meta)
@@ -81,8 +84,6 @@ func runCheck(target string) {
 		} else {
 			result.addCheck("lud16", "fail", "not set")
 		}
-
-		_ = profile
 	} else {
 		result.addCheck("profile", "fail", "no kind 0 found")
 		result.addCheck("nip05", "fail", "no profile")
@@ -136,8 +137,18 @@ func runCheck(target string) {
 		result.addCheck("nip60_wallet", "fail", "no NIP-60 wallet found")
 	}
 
-	// Print results
-	printCheckResult(result)
+	if jsonOutput {
+		out, _ := json.MarshalIndent(result, "", "  ")
+		fmt.Println(string(out))
+		if result.Score < result.MaxScore {
+			os.Exit(1)
+		}
+	} else {
+		printCheckResult(result)
+		if result.Score < result.MaxScore {
+			os.Exit(1)
+		}
+	}
 }
 
 func (r *CheckResult) addCheck(name, status, detail string) {
@@ -149,30 +160,26 @@ func (r *CheckResult) addCheck(name, status, detail string) {
 }
 
 func fetchKind(ctx context.Context, pk nostr.PubKey, kind int) (string, *nostr.Event) {
-	relays := []string{
-		"wss://purplepag.es",
-		"wss://relay.damus.io",
-		"wss://relay.primal.net",
-		"wss://nos.lol",
-		"wss://relay.nostr.band",
-	}
-
 	filter := nostr.Filter{
 		Authors: []nostr.PubKey{pk},
 		Kinds:   []nostr.Kind{nostr.Kind(kind)},
 		Limit:   1,
 	}
 
-	for _, url := range relays {
-		relay, err := nostr.RelayConnect(ctx, url, nostr.RelayOptions{})
+	for _, url := range defaultRelays {
+		relayCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		relay, err := nostr.RelayConnect(relayCtx, url, nostr.RelayOptions{})
 		if err != nil {
+			cancel()
 			continue
 		}
 		for evt := range relay.QueryEvents(filter) {
 			relay.Close()
+			cancel()
 			return url, &evt
 		}
 		relay.Close()
+		cancel()
 	}
 	return "", nil
 }

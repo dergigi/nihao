@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"fiatjaf.com/nostr"
@@ -21,6 +22,7 @@ var defaultRelays = []string{
 	"wss://nos.lol",
 	"wss://relay.nostr.band",
 	"wss://purplepag.es",
+	"wss://relay.snort.social",
 }
 
 func main() {
@@ -30,12 +32,17 @@ func main() {
 		switch args[0] {
 		case "check":
 			target := ""
-			if len(args) > 1 {
-				target = args[1]
+			jsonOutput := false
+			for _, a := range args[1:] {
+				if a == "--json" {
+					jsonOutput = true
+				} else if !strings.HasPrefix(a, "-") {
+					target = a
+				}
 			}
-			runCheck(target)
+			runCheck(target, jsonOutput)
 			return
-		case "version", "--version", "-v":
+		case "version", "--version":
 			fmt.Printf("nihao %s\n", version)
 			return
 		case "help", "--help", "-h":
@@ -64,7 +71,14 @@ SETUP FLAGS:
   --lud16 <user@domain>     Lightning address
   --relays <r1,r2,...>      Comma-separated relay URLs
   --json                    Output result as JSON
-  --sec <nsec|hex>          Use existing secret key instead of generating`)
+  --sec <nsec|hex>          Use existing secret key instead of generating
+
+CHECK FLAGS:
+  --json                    Output result as JSON
+
+EXIT CODES:
+  0                         Success (check: all checks pass)
+  1                         Failure (check: one or more checks fail)`)
 }
 
 func runSetup(args []string) {
@@ -176,10 +190,10 @@ func runSetup(args []string) {
 
 	if opts.jsonOutput {
 		result := SetupResult{
-			Npub:   npub,
-			Nsec:   nsec,
-			Pubkey: pk.Hex(),
-			Relays: relays,
+			Npub:    npub,
+			Nsec:    nsec,
+			Pubkey:  pk.Hex(),
+			Relays:  relays,
 			Profile: profile,
 		}
 		out, _ := json.MarshalIndent(result, "", "  ")
@@ -197,22 +211,52 @@ func runSetup(args []string) {
 	}
 }
 
+type publishResult struct {
+	url     string
+	success bool
+	err     string
+}
+
 func publishToRelays(evt nostr.Event, relays []string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
 
+	results := make(chan publishResult, len(relays))
+	var wg sync.WaitGroup
+
 	for _, url := range relays {
-		relay, err := nostr.RelayConnect(ctx, url, nostr.RelayOptions{})
-		if err != nil {
-			fmt.Printf("   ✗ %s (connection failed)\n", url)
-			continue
-		}
-		err = relay.Publish(ctx, evt)
-		relay.Close()
-		if err != nil {
-			fmt.Printf("   ✗ %s (%s)\n", url, err)
+		wg.Add(1)
+		go func(url string) {
+			defer wg.Done()
+			relayCtx, relayCancel := context.WithTimeout(ctx, 5*time.Second)
+			defer relayCancel()
+
+			relay, err := nostr.RelayConnect(relayCtx, url, nostr.RelayOptions{})
+			if err != nil {
+				results <- publishResult{url, false, "connection failed"}
+				return
+			}
+			defer relay.Close()
+
+			err = relay.Publish(relayCtx, evt)
+			if err != nil {
+				results <- publishResult{url, false, err.Error()}
+			} else {
+				results <- publishResult{url, true, ""}
+			}
+		}(url)
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	for r := range results {
+		if r.success {
+			fmt.Printf("   ✓ %s\n", r.url)
 		} else {
-			fmt.Printf("   ✓ %s\n", url)
+			fmt.Printf("   ✗ %s (%s)\n", r.url, r.err)
 		}
 	}
 }
