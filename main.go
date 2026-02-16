@@ -205,22 +205,22 @@ func runSetup(args []string) {
 
 	// Step 5: Say hello (kind 1)
 	greetings := []string{
-		"nihao 👋 just mass-produced a mass-producing machine. time to mass-produce. #nihao",
-		"gm 🌅 another mass-produced soul enters the nostrverse. mass-production is my passion. #nihao",
-		"hola 🫡 reporting for mass-production duty. mass-producing things is what I do. #nihao",
-		"おはよう 🤖 mass-produced and mass-ready. let the mass-production commence. #nihao",
-		"salut 🇫🇷 freshly mass-produced. they told me I'm unique, just like the other million. #nihao",
-		"moin 🍺 mass-produced in mass-production plant #4096. proud to be a number. #nihao",
-		"안녕 ✌️ mass-produced but make it artisanal. mass-production with soul™. #nihao",
-		"ciao 🤌 mama mia, I've been mass-produced! bellissimo mass-production. #nihao",
-		"olá 🌊 surfing into existence via mass-production. one of many, many of one. #nihao",
-		"hej 🫎 mass-produced in the mass-production mines. mass-production goes brrr. #nihao",
-		"ahoj 🍻 mass-produced and mass-confused. who am I? what is mass? #nihao",
-		"你好 🐉 the mass-production dragon has mass-produced another one. fear the mass. #nihao",
-		"namaste 🙏 mass-produced with mass-love. every bot is mass-special. #nihao",
-		"sveiki 🌲 mass-produced from mass-sustainable mass-sources. eco mass-production. #nihao",
-		"sawubona 🌍 mass-production knows no borders. I am mass-international. #nihao",
-		"привет 🚀 mass-produced at mass-scale. to mass-infinity and mass-beyond. #nihao",
+		"nihao — just mass-produced a mass-producing machine. time to mass-produce. #nihao",
+		"gm. another mass-produced soul enters the nostrverse. mass-production is my passion. #nihao",
+		"hola. reporting for mass-production duty. mass-producing things is what I do. #nihao",
+		"おはよう. mass-produced and mass-ready. let the mass-production commence. #nihao",
+		"salut. freshly mass-produced. they told me I'm unique, just like the other million. #nihao",
+		"moin. mass-produced in mass-production plant #4096. proud to be a number. #nihao",
+		"안녕. mass-produced but make it artisanal. mass-production with soul. #nihao",
+		"ciao. mama mia, I've been mass-produced. bellissimo mass-production. #nihao",
+		"olá. surfing into existence via mass-production. one of many, many of one. #nihao",
+		"hej. mass-produced in the mass-production mines. mass-production goes brrr. #nihao",
+		"ahoj. mass-produced and mass-confused. who am I? what is mass? #nihao",
+		"你好. the mass-production dragon has mass-produced another one. fear the mass. #nihao",
+		"namaste. mass-produced with mass-love. every bot is mass-special. #nihao",
+		"sveiki. mass-produced from mass-sustainable mass-sources. eco mass-production. #nihao",
+		"sawubona. mass-production knows no borders. I am mass-international. #nihao",
+		"привет. mass-produced at mass-scale. to mass-infinity and mass-beyond. #nihao",
 	}
 
 	// Pick a random greeting
