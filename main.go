@@ -17,14 +17,21 @@ import (
 
 var version = "dev"
 
-// Default relays for new identities
+// Default relays for new identities — curated for reliability and coverage.
+// General-purpose relays (read + write):
+//   damus, primal, nos.lol — large, long-running, well-connected
+// Specialized relays (important for discoverability):
+//   purplepag.es — NIP-65 relay list aggregator, critical for outbox model
+//   relay.nostr.band — indexing relay, good for search/discoverability
+//
+// Future: discover relays dynamically via NIP-66 relay monitors or by
+// sampling kind 10002 lists from well-connected npubs.
 var defaultRelays = []string{
 	"wss://relay.damus.io",
 	"wss://relay.primal.net",
 	"wss://nos.lol",
-	"wss://relay.nostr.band",
 	"wss://purplepag.es",
-	"wss://relay.snort.social",
+	"wss://relay.nostr.band",
 }
 
 func main() {

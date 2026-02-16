@@ -50,6 +50,8 @@ nihao check <npub>
 - [x] Meaningful exit codes (0 = healthy, 1 = issues)
 - [x] Profile completeness breakdown (fields present/missing)
 - [ ] Relay quality analysis
+- [ ] Dynamic relay discovery (NIP-66 relay monitors)
+- [ ] Relay discovery from well-connected npubs (sample kind 10002 lists)
 
 ### General
 
