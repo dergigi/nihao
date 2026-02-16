@@ -203,6 +203,19 @@ func runSetup(args []string) {
 	publishToRelays(followEvt, relays)
 	fmt.Println()
 
+	// Step 5: Say hello (kind 1)
+	helloEvt := nostr.Event{
+		CreatedAt: nostr.Timestamp(time.Now().Unix()),
+		Kind:      1,
+		Tags:      nostr.Tags{},
+		Content:   "nihao 👋 world",
+	}
+	helloEvt.Sign(sk)
+
+	fmt.Println("💬 Posting first note (kind 1)...")
+	publishToRelays(helloEvt, relays)
+	fmt.Println()
+
 	// Summary
 	fmt.Println("✅ Identity created!")
 	fmt.Println()
