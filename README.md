@@ -49,15 +49,15 @@ nihao check <npub>
 - [x] Health score
 - [x] `--json` output
 - [x] Meaningful exit codes (0 = healthy, 1 = issues)
+- [x] Profile completeness breakdown (fields present/missing)
 - [ ] Relay quality analysis
-- [ ] Profile completeness breakdown
 
 ### General
 
 - [x] Single binary, zero dependencies
 - [x] Non-interactive by default
 - [x] Meaningful exit codes
-- [ ] Stdin support (pipe nsec)
+- [x] Stdin support (pipe nsec)
 - [ ] `nihao check` without args (read local key)
 - [ ] OpenClaw skill wrapper
 

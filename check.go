@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+
 	"fiatjaf.com/nostr"
 	"fiatjaf.com/nostr/nip19"
 )
@@ -57,9 +58,37 @@ func runCheck(target string, jsonOutput bool) {
 		var meta ProfileMetadata
 		json.Unmarshal([]byte(profileEvt.Content), &meta)
 
-		// Check 1: Profile exists
-		result.addCheck("profile", "pass", fmt.Sprintf("name=%q", meta.Name))
-		result.Score++
+		// Check 1: Profile exists with completeness
+		fields := []string{}
+		missing := []string{}
+		for _, f := range []struct{ name, val string }{
+			{"name", meta.Name},
+			{"display_name", meta.DisplayName},
+			{"about", meta.About},
+			{"picture", meta.Picture},
+			{"banner", meta.Banner},
+		} {
+			if f.val != "" {
+				fields = append(fields, f.name)
+			} else {
+				missing = append(missing, f.name)
+			}
+		}
+
+		detail := fmt.Sprintf("name=%q, %d/5 fields", meta.Name, len(fields))
+		if len(missing) > 0 {
+			detail += fmt.Sprintf(" (missing: %s)", strings.Join(missing, ", "))
+		}
+
+		if len(fields) >= 3 {
+			result.addCheck("profile", "pass", detail)
+			result.Score++
+		} else if len(fields) >= 1 {
+			result.addCheck("profile", "warn", detail)
+			result.Score++ // still counts, just not complete
+		} else {
+			result.addCheck("profile", "fail", "empty profile")
+		}
 
 		// Check 2: NIP-05
 		if meta.NIP05 != "" {
