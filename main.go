@@ -207,8 +207,8 @@ func runSetup(args []string) {
 	helloEvt := nostr.Event{
 		CreatedAt: nostr.Timestamp(time.Now().Unix()),
 		Kind:      1,
-		Tags:      nostr.Tags{},
-		Content:   "nihao 👋 world",
+		Tags:      nostr.Tags{nostr.Tag{"t", "nihao"}},
+		Content:   "nihao 👋 world #nihao",
 	}
 	helloEvt.Sign(sk)
 
