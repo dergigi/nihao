@@ -225,11 +225,14 @@ func fetchKind(ctx context.Context, pk nostr.PubKey, kind int) (string, *nostr.E
 }
 
 func verifyNIP05(ctx context.Context, identifier string, expectedPK nostr.PubKey) bool {
-	parts := strings.Split(identifier, "@")
-	if len(parts) != 2 {
-		return false
+	var name, domain string
+	if strings.Contains(identifier, "@") {
+		parts := strings.SplitN(identifier, "@", 2)
+		name, domain = parts[0], parts[1]
+	} else {
+		// Bare domain (e.g. "dergigi.com") is treated as _@domain
+		name, domain = "_", identifier
 	}
-	name, domain := parts[0], parts[1]
 
 	url := fmt.Sprintf("https://%s/.well-known/nostr.json?name=%s", domain, name)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
