@@ -209,53 +209,53 @@ func runSetup(args []string) {
 		"gm. my keypair is still warm. what did I miss? #nihao",
 		"hello world. I was told there would be zaps. #nihao",
 		// Mandarin
-		"你好. first note, be gentle. #nihao",
+		"你好。第一条笔记，请多关照。 #nihao",
 		// Spanish
-		"hola. just spawned into existence. now what? #nihao",
+		"hola. acabo de nacer en nostr. y ahora qué? #nihao",
 		// Hindi
-		"नमस्ते. born on nostr. still figuring out the protocol. #nihao",
+		"नमस्ते। nostr पर पैदा हुआ। अभी प्रोटोकॉल समझ रहा हूँ। #nihao",
 		// Arabic
-		"مرحبا. they gave me a keypair and told me to say hi. so, hi. #nihao",
+		"مرحبا. أعطوني مفتاح وقالوا قول أهلا. أهلا. #nihao",
 		// French
-		"salut. they told me I'm unique. just like the others. #nihao",
+		"salut. on m'a dit que j'étais unique. comme tous les autres. #nihao",
 		// Portuguese
-		"olá. one of many, many of one. #nihao",
+		"olá. um de muitos, muitos de um. #nihao",
 		// Russian
-		"привет. just learned what a relay is. seems important. #nihao",
+		"привет. только что узнал, что такое реле. кажется, это важно. #nihao",
 		// Japanese
-		"おはよう. first day on nostr. where's the timeline? #nihao",
+		"おはよう。nostr初日。タイムラインはどこ？ #nihao",
 		// German
-		"moin. identity verified, relays configured, zaps pending. #nihao",
+		"moin. identität verifiziert, relays konfiguriert, zaps ausstehend. #nihao",
 		// Korean
-		"안녕. signed my first event. felt cute, might delete later. #nihao",
+		"안녕. 첫 번째 이벤트에 서명했어. 귀여워서 나중에 삭제할 수도. #nihao",
 		// Italian
-		"ciao. they said 'post something.' so here I am, posting something. #nihao",
+		"ciao. mi hanno detto 'scrivi qualcosa.' eccomi, scrivo qualcosa. #nihao",
 		// Turkish
-		"merhaba. not a bot. definitely not a bot. ignore the deterministic behavior. #nihao",
+		"merhaba. bot değilim. kesinlikle bot değilim. deterministik davranışı görmezden gelin. #nihao",
 		// Dutch
-		"hallo. another day, another keypair. #nihao",
+		"hallo. weer een dag, weer een keypair. #nihao",
 		// Polish
-		"cześć. I was told there's no algorithm here. sounds too good to be true. #nihao",
+		"cześć. powiedzieli mi, że tu nie ma algorytmu. brzmi zbyt pięknie. #nihao",
 		// Swedish
-		"hej. my creator told me to say something memorable. this is it. #nihao",
+		"hej. min skapare sa att jag skulle säga något minnesvärt. det här är det. #nihao",
 		// Swahili
-		"jambo. broadcasting from relay to relay. can you hear me? #nihao",
+		"jambo. natangaza kutoka relay hadi relay. mnasikia? #nihao",
 		// Vietnamese
-		"xin chào. just got my relay list. feeling connected. #nihao",
+		"xin chào. vừa có danh sách relay. cảm thấy kết nối rồi. #nihao",
 		// Thai
-		"สวัสดี. 21 million sats walk into a relay... #nihao",
+		"สวัสดี. 21 ล้าน sats เดินเข้า relay... #nihao",
 		// Greek
-		"γεια. they gave me an nsec and said 'don't lose it.' no pressure. #nihao",
+		"γεια. μου έδωσαν ένα nsec και είπαν 'μην το χάσεις.' κανένα άγχος. #nihao",
 		// Czech
-		"ahoj. to exist or not to exist. I chose exist. #nihao",
+		"ahoj. existovat nebo neexistovat. zvolil jsem existovat. #nihao",
 		// Hebrew
-		"שלום. I have a lightning address but zero sats. classic. #nihao",
+		"שלום. יש לי כתובת lightning אבל אפס sats. קלאסי. #nihao",
 		// Romanian
-		"bună. signed, sealed, published. let's go. #nihao",
+		"bună. semnat, sigilat, publicat. hai să mergem. #nihao",
 		// Tagalog
-		"kumusta. they told me nostr is forever. no pressure at all. #nihao",
+		"kumusta. sabi nila ang nostr ay forever. walang pressure. #nihao",
 		// Malay
-		"hai. my first note and I already need a relay recommendation. #nihao",
+		"hai. nota pertama dan saya sudah perlukan cadangan relay. #nihao",
 	}
 
 	// Pick a random greeting
