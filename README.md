@@ -4,19 +4,6 @@
 
 A CLI tool to set up and verify Nostr identities. Agent-friendly by design.
 
-## What it does
-
-Running `nihao` with no arguments creates a fully-equipped Nostr identity:
-
-- 🔑 Generate keypair
-- 👤 Publish profile metadata (kind 0)
-- 📡 Publish relay list (kind 10002)
-- 👥 Publish follow list (kind 3)
-- 💰 Set up NIP-60 Cashu wallet
-- ⚡ Register npub.cash lightning address
-
-Running `nihao check` audits an existing identity and gives it a health score.
-
 ## Install
 
 ```bash
@@ -29,20 +16,53 @@ go install github.com/dergigi/nihao@latest
 # Full identity setup with sane defaults
 nihao
 
-# Non-interactive setup
+# Non-interactive setup with options
 nihao --name "MyAgent" --about "I do things" --json
 
 # Check an existing identity
 nihao check <npub>
-
-# Check your own identity
-nihao check
 ```
+
+## Features
+
+### Setup (`nihao`)
+
+- [x] Generate keypair (or use `--sec`)
+- [x] Publish profile metadata (kind 0)
+- [x] Publish relay list (kind 10002)
+- [x] Publish follow list (kind 3)
+- [x] `--json` output for agent consumption
+- [ ] NIP-60 Cashu wallet setup
+- [ ] npub.cash registration
+- [ ] NIP-05 setup assistance
+- [ ] Lightning address setup
+- [ ] Parallel relay publishing
+
+### Check (`nihao check <npub>`)
+
+- [x] Profile metadata (kind 0)
+- [x] NIP-05 verification (live DNS + HTTP check)
+- [x] Lightning address verification (LNURL resolution)
+- [x] Relay list (kind 10002)
+- [x] Follow list (kind 3)
+- [x] NIP-60 wallet detection
+- [x] Health score
+- [ ] `--json` output
+- [ ] Relay quality analysis
+- [ ] Profile completeness breakdown
+
+### General
+
+- [x] Single binary, zero dependencies
+- [x] Non-interactive by default
+- [x] Meaningful exit codes
+- [ ] Stdin support (pipe nsec)
+- [ ] `nihao check` without args (read local key)
+- [ ] OpenClaw skill wrapper
 
 ## Built with
 
-- [nak](https://github.com/fiatjaf/nak) — the nostr army knife (used as a Go library)
-- [go-nostr](https://pkg.go.dev/fiatjaf.com/nostr) — Nostr protocol library for Go
+- [go-nostr](https://pkg.go.dev/fiatjaf.com/nostr) — the library that powers [nak](https://github.com/fiatjaf/nak)
 
 ## License
 
