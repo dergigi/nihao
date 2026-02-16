@@ -218,20 +218,38 @@ func fetchKind(ctx context.Context, pk nostr.PubKey, kind int) (string, *nostr.E
 		Limit:   1,
 	}
 
-	for _, url := range defaultRelays {
-		relayCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		relay, err := nostr.RelayConnect(relayCtx, url, nostr.RelayOptions{})
-		if err != nil {
-			cancel()
-			continue
+	type fetchResult struct {
+		url string
+		evt *nostr.Event
+	}
+
+	results := make(chan fetchResult, len(defaultRelays))
+	fetchCtx, fetchCancel := context.WithCancel(ctx)
+	defer fetchCancel()
+
+	for _, u := range defaultRelays {
+		go func(u string) {
+			relayCtx, cancel := context.WithTimeout(fetchCtx, 5*time.Second)
+			defer cancel()
+			relay, err := nostr.RelayConnect(relayCtx, u, nostr.RelayOptions{})
+			if err != nil {
+				results <- fetchResult{u, nil}
+				return
+			}
+			defer relay.Close()
+			for evt := range relay.QueryEvents(filter) {
+				results <- fetchResult{u, &evt}
+				return
+			}
+			results <- fetchResult{u, nil}
+		}(u)
+	}
+
+	for range defaultRelays {
+		r := <-results
+		if r.evt != nil {
+			return r.url, r.evt
 		}
-		for evt := range relay.QueryEvents(filter) {
-			relay.Close()
-			cancel()
-			return url, &evt
-		}
-		relay.Close()
-		cancel()
 	}
 	return "", nil
 }
