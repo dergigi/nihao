@@ -64,7 +64,7 @@ Override with `--relays wss://my.relay,wss://other.relay`.
 - [x] Relay list (kind 10002)
 - [x] Follow list (kind 3)
 - [x] NIP-60 wallet detection (kind 37375)
-- [x] Health score (0–6)
+- [x] Health score (0–8)
 - [x] `--json` output
 - [x] Meaningful exit codes (0 = healthy, 1 = issues found)
 - [ ] Relay quality analysis
