@@ -51,7 +51,7 @@ func runCheck(target string, jsonOutput bool) {
 	result := CheckResult{
 		Npub:     npub,
 		Pubkey:   pk.Hex(),
-		MaxScore: 6,
+		MaxScore: 8,
 	}
 
 	// Fetch profile (kind 0)
@@ -111,7 +111,19 @@ func runCheck(target string, jsonOutput bool) {
 		}
 
 		// Check: Profile images health
-		checkProfileImages(ctx, &result, meta.Picture, meta.Banner)
+		// Extract NIP-05 domain for own-domain hosting detection
+		nip05Domain := ""
+		if meta.NIP05 != "" {
+			if strings.Contains(meta.NIP05, "@") {
+				parts := strings.SplitN(meta.NIP05, "@", 2)
+				if parts[0] == "_" {
+					nip05Domain = parts[1]
+				}
+			} else {
+				nip05Domain = meta.NIP05 // bare domain = root
+			}
+		}
+		checkProfileImages(ctx, &result, meta.Picture, meta.Banner, nip05Domain)
 
 		// Check 3: Lightning address
 		if meta.LUD16 != "" {
@@ -374,7 +386,22 @@ func formatSize(bytes int64) string {
 	return fmt.Sprintf("%.1f MB", float64(bytes)/float64(1<<20))
 }
 
-func checkProfileImages(ctx context.Context, result *CheckResult, picture, banner string) {
+// imageHostingTier classifies where an image is hosted.
+// blossom > own domain (root NIP-05) > third-party
+func imageHostingTier(info imageInfo, nip05Domain string) (tier string, label string) {
+	if info.Blossom {
+		return "blossom", "blossom"
+	}
+	if nip05Domain != "" {
+		parsed, err := url.Parse(info.URL)
+		if err == nil && strings.ToLower(parsed.Hostname()) == strings.ToLower(nip05Domain) {
+			return "own", "own domain"
+		}
+	}
+	return "third-party", "third-party"
+}
+
+func checkProfileImages(ctx context.Context, result *CheckResult, picture, banner, nip05Domain string) {
 	images := []struct {
 		name string
 		url  string
@@ -385,16 +412,15 @@ func checkProfileImages(ctx context.Context, result *CheckResult, picture, banne
 
 	for _, img := range images {
 		if img.url == "" {
-			continue // already flagged as missing in profile completeness
+			result.addCheck(img.name, "fail", "not set")
+			continue
 		}
 
 		info := probeImage(ctx, img.url)
 
-		var parts []string
-
 		// Reachability
 		if info.Status == -1 {
-			result.addCheck(img.name, "warn", fmt.Sprintf("unreachable: %s", img.url))
+			result.addCheck(img.name, "fail", fmt.Sprintf("unreachable: %s", img.url))
 			continue
 		}
 		if info.Status == 404 {
@@ -406,18 +432,16 @@ func checkProfileImages(ctx context.Context, result *CheckResult, picture, banne
 			continue
 		}
 
-		// Hosting
-		if info.Blossom {
-			parts = append(parts, "blossom ✓")
-		} else {
-			parts = append(parts, "not on blossom")
-		}
+		// Hosting tier
+		tier, tierLabel := imageHostingTier(info, nip05Domain)
+		var parts []string
+		parts = append(parts, tierLabel)
 
 		// Size
 		if info.Size >= 0 {
 			sizeStr := formatSize(info.Size)
 			if info.SizeWarn {
-				parts = append(parts, fmt.Sprintf("%s ⚠️ large", sizeStr))
+				parts = append(parts, fmt.Sprintf("%s (too large)", sizeStr))
 			} else {
 				parts = append(parts, sizeStr)
 			}
@@ -426,9 +450,16 @@ func checkProfileImages(ctx context.Context, result *CheckResult, picture, banne
 		status := "pass"
 		if info.SizeWarn {
 			status = "warn"
+		} else if tier == "third-party" {
+			status = "warn"
 		}
 
 		result.addCheck(img.name, status, strings.Join(parts, ", "))
+
+		// Score: blossom or own domain = 1 point, third-party reachable = 0.5 (round down)
+		if tier == "blossom" || tier == "own" {
+			result.Score++
+		}
 	}
 }
 
