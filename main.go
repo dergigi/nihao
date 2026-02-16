@@ -220,7 +220,31 @@ func runSetup(args []string) {
 	publishToRelays(followEvt, relays, opts.quiet)
 	logln()
 
-	// Step 5: Say hello (kind 1)
+	// Step 5: Set up NIP-60 wallet
+	var walletResult *WalletSetupResult
+	if !opts.noWallet {
+		walletCtx, walletCancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer walletCancel()
+
+		logln("🔍 Validating mints...")
+		mintInfos, err := selectMints(walletCtx, opts.mints)
+		if err != nil {
+			logln(fmt.Sprintf("   ⚠️  Wallet setup skipped: %s", err))
+		} else {
+			for _, m := range mintInfos {
+				logln(fmt.Sprintf("   ✓ %s (%s)", m.Name, m.URL))
+			}
+			logln()
+
+			walletResult, err = setupWallet(walletCtx, sk, relays, mintInfos)
+			if err != nil {
+				logln(fmt.Sprintf("   ⚠️  Wallet setup failed: %s", err))
+			}
+		}
+		logln()
+	}
+
+	// Step 6: Say hello (kind 1)
 	greetings := []string{
 		// English
 		"gm. my keypair is still warm. what did I miss? #nihao",
@@ -303,6 +327,7 @@ func runSetup(args []string) {
 			Pubkey:  pk.Hex(),
 			Relays:  relays,
 			Profile: profile,
+			Wallet:  walletResult,
 		}
 		out, _ := json.MarshalIndent(result, "", "  ")
 		fmt.Println(string(out))
@@ -313,6 +338,10 @@ func runSetup(args []string) {
 		fmt.Println("   │")
 		fmt.Printf("   │ name: %s\n", name)
 		fmt.Printf("   │ relays: %d configured\n", len(relays))
+		if walletResult != nil {
+			fmt.Printf("   │ wallet: %d mint(s)\n", len(walletResult.Mints))
+			fmt.Printf("   │ p2pk: %s\n", walletResult.P2PKPubkey)
+		}
 		fmt.Println("   └─────────────────────────────────────────")
 		fmt.Println()
 		fmt.Println("   ⚠️  Save your nsec! It cannot be recovered.")
@@ -399,11 +428,12 @@ type ProfileMetadata struct {
 }
 
 type SetupResult struct {
-	Npub    string          `json:"npub"`
-	Nsec    string          `json:"nsec"`
-	Pubkey  string          `json:"pubkey"`
-	Relays  []string        `json:"relays"`
-	Profile ProfileMetadata `json:"profile"`
+	Npub    string             `json:"npub"`
+	Nsec    string             `json:"nsec"`
+	Pubkey  string             `json:"pubkey"`
+	Relays  []string           `json:"relays"`
+	Profile ProfileMetadata    `json:"profile"`
+	Wallet  *WalletSetupResult `json:"wallet,omitempty"`
 }
 
 type setupOpts struct {
@@ -414,10 +444,12 @@ type setupOpts struct {
 	nip05      string
 	lud16      string
 	relays     []string
+	mints      []string
 	sec        string
 	stdin      bool
 	jsonOutput bool
 	quiet      bool
+	noWallet   bool
 }
 
 func parseSetupFlags(args []string) setupOpts {
@@ -466,6 +498,13 @@ func parseSetupFlags(args []string) setupOpts {
 			}
 		case "--json":
 			opts.jsonOutput = true
+		case "--mint":
+			if i+1 < len(args) {
+				opts.mints = append(opts.mints, args[i+1])
+				i++
+			}
+		case "--no-wallet":
+			opts.noWallet = true
 		case "--quiet", "-q":
 			opts.quiet = true
 		case "--stdin":

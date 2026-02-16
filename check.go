@@ -180,8 +180,11 @@ func runCheck(target string, jsonOutput bool, quiet bool) {
 		result.addCheck("follow_list", "fail", "no kind 3 found")
 	}
 
-	// Check 6: NIP-60 wallet (kind 37375)
-	_, walletEvt := fetchKind(ctx, pk, 37375)
+	// Check 6: NIP-60 wallet (kind 17375 new, 37375 old)
+	_, walletEvt := fetchKind(ctx, pk, 17375)
+	if walletEvt == nil {
+		_, walletEvt = fetchKind(ctx, pk, 37375) // backwards compat
+	}
 	if walletEvt != nil {
 		result.addCheck("nip60_wallet", "pass", "wallet event found")
 		result.Score++
