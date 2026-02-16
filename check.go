@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -101,6 +103,9 @@ func runCheck(target string, jsonOutput bool) {
 		} else {
 			result.addCheck("nip05", "fail", "not set")
 		}
+
+		// Check: Profile images health
+		checkProfileImages(ctx, &result, meta.Picture, meta.Banner)
 
 		// Check 3: Lightning address
 		if meta.LUD16 != "" {
@@ -288,6 +293,134 @@ func parsePubkey(input string) (nostr.PubKey, error) {
 		return val.(nostr.PubKey), nil
 	}
 	return nostr.PubKeyFromHex(input)
+}
+
+// imageInfo holds the result of probing a profile image URL.
+type imageInfo struct {
+	URL      string `json:"url"`
+	Status   int    `json:"status"`
+	Size     int64  `json:"size_bytes"` // -1 if unknown
+	Blossom  bool   `json:"blossom"`
+	SizeWarn bool   `json:"size_warn"` // true if > 1MB
+}
+
+// knownBlossomHosts is a set of known Blossom media servers.
+var knownBlossomHosts = map[string]bool{
+	"blossom.primal.net":  true,
+	"cdn.satellite.earth": true,
+	"files.v0l.io":        true,
+	"blossom.oxtr.dev":    true,
+	"blossom.band":        true,
+	"media.nostr.build":   true,
+}
+
+const maxRecommendedImageSize = 1 << 20 // 1 MB
+
+func probeImage(ctx context.Context, rawURL string) imageInfo {
+	info := imageInfo{URL: rawURL, Size: -1}
+
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		info.Status = -1
+		return info
+	}
+
+	host := strings.ToLower(parsed.Hostname())
+	info.Blossom = knownBlossomHosts[host]
+
+	req, err := http.NewRequestWithContext(ctx, "HEAD", rawURL, nil)
+	if err != nil {
+		info.Status = -1
+		return info
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		info.Status = -1
+		return info
+	}
+	resp.Body.Close()
+
+	info.Status = resp.StatusCode
+	if cl := resp.Header.Get("Content-Length"); cl != "" {
+		if n, err := strconv.ParseInt(cl, 10, 64); err == nil {
+			info.Size = n
+			info.SizeWarn = n > maxRecommendedImageSize
+		}
+	}
+
+	return info
+}
+
+func formatSize(bytes int64) string {
+	if bytes < 0 {
+		return "unknown size"
+	}
+	if bytes < 1024 {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	if bytes < 1<<20 {
+		return fmt.Sprintf("%.1f KB", float64(bytes)/1024)
+	}
+	return fmt.Sprintf("%.1f MB", float64(bytes)/float64(1<<20))
+}
+
+func checkProfileImages(ctx context.Context, result *CheckResult, picture, banner string) {
+	images := []struct {
+		name string
+		url  string
+	}{
+		{"picture", picture},
+		{"banner", banner},
+	}
+
+	for _, img := range images {
+		if img.url == "" {
+			continue // already flagged as missing in profile completeness
+		}
+
+		info := probeImage(ctx, img.url)
+
+		var parts []string
+
+		// Reachability
+		if info.Status == -1 {
+			result.addCheck(img.name, "warn", fmt.Sprintf("unreachable: %s", img.url))
+			continue
+		}
+		if info.Status == 404 {
+			result.addCheck(img.name, "fail", fmt.Sprintf("404 not found: %s", img.url))
+			continue
+		}
+		if info.Status >= 400 {
+			result.addCheck(img.name, "warn", fmt.Sprintf("HTTP %d: %s", info.Status, img.url))
+			continue
+		}
+
+		// Hosting
+		if info.Blossom {
+			parts = append(parts, "blossom ✓")
+		} else {
+			parts = append(parts, "not on blossom")
+		}
+
+		// Size
+		if info.Size >= 0 {
+			sizeStr := formatSize(info.Size)
+			if info.SizeWarn {
+				parts = append(parts, fmt.Sprintf("%s ⚠️ large", sizeStr))
+			} else {
+				parts = append(parts, sizeStr)
+			}
+		}
+
+		status := "pass"
+		if info.SizeWarn {
+			status = "warn"
+		}
+
+		result.addCheck(img.name, status, strings.Join(parts, ", "))
+	}
 }
 
 func printCheckResult(r CheckResult) {
