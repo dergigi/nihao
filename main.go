@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -73,6 +74,7 @@ SETUP FLAGS:
   --relays <r1,r2,...>      Comma-separated relay URLs
   --json                    Output result as JSON
   --sec <nsec|hex>          Use existing secret key instead of generating
+  --stdin                   Read secret key from stdin (for piping)
 
 CHECK FLAGS:
   --json                    Output result as JSON
@@ -97,7 +99,7 @@ func runSetup(args []string) {
 			fatal("invalid secret key: %s", err)
 		}
 		fmt.Println("🔑 Using provided secret key")
-	} else if hasStdin() {
+	} else if opts.stdin {
 		line := readStdin()
 		var err error
 		sk, err = parseSecretKey(strings.TrimSpace(line))
@@ -106,7 +108,7 @@ func runSetup(args []string) {
 		}
 		fmt.Println("🔑 Using secret key from stdin")
 	} else {
-		sk = nostr.Generate()
+		sk = generateKey()
 		fmt.Println("🔑 Generated new keypair")
 	}
 
@@ -141,6 +143,9 @@ func runSetup(args []string) {
 	}
 	if opts.lud16 != "" {
 		profile.LUD16 = opts.lud16
+	} else {
+		// Default: npub.cash lightning address (works without registration)
+		profile.LUD16 = npub + "@npub.cash"
 	}
 
 	contentBytes, _ := json.Marshal(profile)
@@ -313,6 +318,7 @@ type setupOpts struct {
 	lud16      string
 	relays     []string
 	sec        string
+	stdin      bool
 	jsonOutput bool
 }
 
@@ -362,17 +368,19 @@ func parseSetupFlags(args []string) setupOpts {
 			}
 		case "--json":
 			opts.jsonOutput = true
+		case "--stdin":
+			opts.stdin = true
 		}
 	}
 	return opts
 }
 
-func hasStdin() bool {
-	fi, err := os.Stdin.Stat()
-	if err != nil {
-		return false
+func generateKey() nostr.SecretKey {
+	var sk nostr.SecretKey
+	if _, err := rand.Read(sk[:]); err != nil {
+		fatal("failed to generate random key: %s", err)
 	}
-	return (fi.Mode() & os.ModeCharDevice) == 0
+	return sk
 }
 
 func readStdin() string {
