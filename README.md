@@ -33,7 +33,7 @@ nihao check <npub>
 - [x] Publish follow list (kind 3)
 - [x] `--json` output for agent consumption
 - [ ] NIP-60 Cashu wallet setup
-- [ ] Auto-set lud16 to `<npub>@npub.cash` (no registration needed)
+- [x] Auto-set lud16 to `<npub>@npub.cash` (no registration needed)
 - [ ] NIP-05 setup assistance
 - [x] Parallel relay publishing
 
@@ -56,7 +56,7 @@ nihao check <npub>
 - [x] Single binary, zero dependencies
 - [x] Non-interactive by default
 - [x] Meaningful exit codes
-- [x] Stdin support (pipe nsec)
+- [x] Stdin support (`echo $NSEC | nihao --stdin`)
 - [ ] `nihao check` without args (read local key)
 - [ ] OpenClaw skill wrapper
 
