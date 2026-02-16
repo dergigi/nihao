@@ -83,6 +83,10 @@ Override with `--relays wss://my.relay,wss://other.relay`.
 
 - [go-nostr](https://pkg.go.dev/fiatjaf.com/nostr) — the library that powers [nak](https://github.com/fiatjaf/nak)
 
+## Versioning
+
+This project follows [Semantic Versioning](https://semver.org/). See [CHANGELOG.md](CHANGELOG.md) for release history.
+
 ## License
 
 MIT
