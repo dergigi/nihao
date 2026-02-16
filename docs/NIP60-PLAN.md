@@ -177,58 +177,52 @@ correctly.
 
 ## TODO Checklist
 
-### Step 1: Mint validation helper
-- [ ] Create `mint.go` with `validateMint(ctx, url)` function
-- [ ] Fetch `/v1/info` — check reachable, parse name/version/supported NUTs
-- [ ] Fetch `/v1/keys` — verify active sat-denominated keyset exists
-- [ ] Check NUT-11 (P2PK) support — required for nutzaps
-- [ ] Check NUT-04 + NUT-05 (bolt11 mint/melt) support
-- [ ] Return structured MintInfo with validation result
-- [ ] Commit: `feat: add mint validation helper`
+### Step 1: Mint validation helper ✅
+- [x] Create `mint.go` with `validateMint(ctx, url)` function
+- [x] Fetch `/v1/info` — check reachable, parse name/version/supported NUTs
+- [x] Fetch `/v1/keys` — verify active sat-denominated keyset exists
+- [x] Check NUT-11 (P2PK) support — required for nutzaps
+- [x] Check NUT-04 + NUT-05 (bolt11 mint/melt) support
+- [x] Return structured MintInfo with validation result
 
-### Step 2: Default mint list with validation
-- [ ] Define curated default mints (minibits, coinos, macadamia)
-- [ ] On setup, validate each default mint, filter to working ones
-- [ ] Require at least 1 valid mint to proceed with wallet creation
-- [ ] Add `--mint` flag to override defaults
-- [ ] Commit: `feat: curated default mints with validation`
+### Step 2: Default mint list with validation ✅
+- [x] Define curated default mints (minibits, coinos, macadamia)
+- [x] On setup, validate each default mint, filter to working ones
+- [x] Require at least 1 valid mint to proceed with wallet creation
+- [x] Add `--mint` flag to override defaults
 
-### Step 3: Generate wallet privkey
-- [ ] Generate random 32-byte secp256k1 private key (NOT the nostr key)
-- [ ] Derive compressed public key (02-prefixed for cashu P2PK compat)
-- [ ] Commit: `feat: generate wallet P2PK keypair`
+### Step 3: Generate wallet privkey ✅
+- [x] Generate random 32-byte secp256k1 private key (NOT the nostr key)
+- [x] Derive compressed public key (02-prefixed for cashu P2PK compat)
 
-### Step 4: Publish wallet event (kind 17375)
-- [ ] Build encrypted content: `[["privkey", "<hex>"], ["mint", "<url>"], ...]`
-- [ ] Use NIP-44 encryption via go-nostr Keyer interface
-- [ ] Sign and publish to user's relays
-- [ ] Commit: `feat: publish NIP-60 wallet event (kind 17375)`
+### Step 4: Publish wallet event (kind 17375) ✅
+- [x] Build encrypted content: `[["privkey", "<hex>"], ["mint", "<url>"], ...]`
+- [x] Use NIP-44 encryption via go-nostr Keyer interface
+- [x] Sign and publish to user's relays
 
-### Step 5: Publish nutzap info (kind 10019)
-- [ ] Add `relay` tags (user's configured relays)
-- [ ] Add `mint` tags (validated mints, with "sat" unit marker)
-- [ ] Add `pubkey` tag (P2PK public key from wallet privkey)
-- [ ] Sign and publish to user's relays
-- [ ] Commit: `feat: publish nutzap info event (kind 10019)`
+### Step 5: Publish nutzap info (kind 10019) ✅
+- [x] Add `relay` tags (user's configured relays)
+- [x] Add `mint` tags (validated mints, with "sat" unit marker)
+- [x] Add `pubkey` tag (P2PK public key from wallet privkey)
+- [x] Sign and publish to user's relays
 
-### Step 6: Update nihao check
-- [ ] Check for kind 17375 (new) AND kind 37375 (old) for backwards compat
+### Step 6: Update nihao check ✅ (partial)
+- [x] Check for kind 17375 (new) AND kind 37375 (old) for backwards compat
 - [ ] If wallet found, verify mints are still reachable
 - [ ] Check for kind 10019 (nutzap info) — warn if missing
 - [ ] Show mint names/URLs in check output
-- [ ] Commit: `feat(check): enhanced wallet and nutzap verification`
 
-### Step 7: Wire it all together
-- [ ] Integrate wallet setup into main `nihao` setup flow
-- [ ] Show wallet info in setup summary (mints, P2PK pubkey)
-- [ ] Include wallet details in `--json` output
-- [ ] Test end-to-end: create identity, check it, verify wallet events on relays
-- [ ] Commit: `feat: integrate NIP-60 wallet into identity setup`
+### Step 7: Wire it all together ✅
+- [x] Integrate wallet setup into main `nihao` setup flow
+- [x] Show wallet info in setup summary (mints, P2PK pubkey)
+- [x] Include wallet details in `--json` output
+- [x] Test end-to-end: create identity, check it, verify wallet events on relays
+- [x] `--no-wallet` flag to skip wallet setup
 
 ### Step 8: Release
 - [ ] Update README with wallet features
 - [ ] Update CHANGELOG.md
-- [ ] Tag v0.5.0 (or appropriate version)
+- [ ] Tag v0.5.0
 - [ ] Dogfood: create fresh identity, verify wallet works with nak
 
 ## Open Questions
