@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-02-17
+
+### Added
+- NIP-60 Cashu wallet setup during identity creation (kind 17375 + kind 10019)
+- Mint validation: checks reachability, sat keyset, NUT-04/05/11 support
+- `--mint <url>` flag to override default mints (repeatable)
+- `--no-wallet` flag to skip wallet setup
+- `nihao check` now validates wallet mints (reachability, name display)
+- `nihao check` warns if wallet exists but nutzap info (kind 10019) is missing
+- `nihao check` supports both kind 17375 (new) and kind 37375 (old) wallet events
+- Wallet mint details in `--json` output (URLs, names, reachability, NUT support)
+- Curated default mints: minibits, coinos, macadamia
+
 ## [0.5.0] - 2025-02-16
 
 ### Added

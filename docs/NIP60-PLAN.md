@@ -206,11 +206,11 @@ correctly.
 - [x] Add `pubkey` tag (P2PK public key from wallet privkey)
 - [x] Sign and publish to user's relays
 
-### Step 6: Update nihao check ✅ (partial)
+### Step 6: Update nihao check ✅
 - [x] Check for kind 17375 (new) AND kind 37375 (old) for backwards compat
-- [ ] If wallet found, verify mints are still reachable
-- [ ] Check for kind 10019 (nutzap info) — warn if missing
-- [ ] Show mint names/URLs in check output
+- [x] If wallet found, verify mints are still reachable
+- [x] Check for kind 10019 (nutzap info) — warn if missing
+- [x] Show mint names/URLs in check output
 
 ### Step 7: Wire it all together ✅
 - [x] Integrate wallet setup into main `nihao` setup flow
@@ -219,10 +219,10 @@ correctly.
 - [x] Test end-to-end: create identity, check it, verify wallet events on relays
 - [x] `--no-wallet` flag to skip wallet setup
 
-### Step 8: Release
-- [ ] Update README with wallet features
-- [ ] Update CHANGELOG.md
-- [ ] Tag v0.5.0
+### Step 8: Release ✅ (partial — ready for review)
+- [x] Update README with wallet features
+- [x] Update CHANGELOG.md
+- [ ] Tag v0.6.0
 - [ ] Dogfood: create fresh identity, verify wallet works with nak
 
 ## Open Questions

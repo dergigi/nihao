@@ -23,6 +23,12 @@ nihao --name "MyAgent" --about "I do things" --json
 nihao --sec nsec1...
 echo $NSEC | nihao --stdin --name "MyAgent"
 
+# Setup with custom mints
+nihao --mint https://mint.minibits.cash/Bitcoin --mint https://mint.coinos.io
+
+# Setup without wallet
+nihao --no-wallet
+
 # Check an existing identity
 nihao check <npub>
 nihao check <npub> --json
@@ -53,7 +59,10 @@ Override with `--relays wss://my.relay,wss://other.relay`.
 - [x] Parallel relay publishing
 - [x] `--json` output for agent consumption
 - [x] `--quiet` mode for agent consumption
-- [ ] NIP-60 Cashu wallet setup
+- [x] NIP-60 Cashu wallet setup (kind 17375 + kind 10019)
+- [x] Mint validation (NUT-04, NUT-05, NUT-11, sat keyset)
+- [x] `--mint <url>` flag to override default mints
+- [x] `--no-wallet` flag to skip wallet setup
 - [ ] NIP-05 setup assistance
 
 ### Check (`nihao check <npub>`)
@@ -64,7 +73,9 @@ Override with `--relays wss://my.relay,wss://other.relay`.
 - [x] Lightning address verification (LNURL resolution)
 - [x] Relay list (kind 10002)
 - [x] Follow list (kind 3)
-- [x] NIP-60 wallet detection (kind 37375)
+- [x] NIP-60 wallet detection (kind 17375 + kind 37375 backwards compat)
+- [x] Wallet mint validation (reachability, name, NUT support)
+- [x] Nutzap info (kind 10019) detection with missing-warning
 - [x] Health score (0–8)
 - [x] Parallel relay fetching
 - [x] `--json` output

@@ -17,11 +17,20 @@ import (
 )
 
 type CheckResult struct {
-	Npub     string      `json:"npub"`
-	Pubkey   string      `json:"pubkey"`
-	Score    int         `json:"score"`
-	MaxScore int         `json:"max_score"`
-	Checks   []CheckItem `json:"checks"`
+	Npub     string          `json:"npub"`
+	Pubkey   string          `json:"pubkey"`
+	Score    int             `json:"score"`
+	MaxScore int             `json:"max_score"`
+	Checks   []CheckItem     `json:"checks"`
+	Wallet   *WalletCheckInfo `json:"wallet,omitempty"`
+}
+
+// WalletCheckInfo holds wallet details discovered during check.
+type WalletCheckInfo struct {
+	WalletKind int         `json:"wallet_kind"`
+	HasNutzap  bool        `json:"has_nutzap_info"`
+	Mints      []MintInfo  `json:"mints,omitempty"`
+	P2PKPubkey string      `json:"p2pk_pubkey,omitempty"`
 }
 
 type CheckItem struct {
@@ -181,13 +190,73 @@ func runCheck(target string, jsonOutput bool, quiet bool) {
 	}
 
 	// Check 6: NIP-60 wallet (kind 17375 new, 37375 old)
+	walletKind := 0
 	_, walletEvt := fetchKind(ctx, pk, 17375)
-	if walletEvt == nil {
+	if walletEvt != nil {
+		walletKind = 17375
+	} else {
 		_, walletEvt = fetchKind(ctx, pk, 37375) // backwards compat
+		if walletEvt != nil {
+			walletKind = 37375
+		}
 	}
 	if walletEvt != nil {
-		result.addCheck("nip60_wallet", "pass", "wallet event found")
+		kindLabel := fmt.Sprintf("kind %d", walletKind)
+		if walletKind == 37375 {
+			kindLabel += " (old)"
+		}
+		result.addCheck("nip60_wallet", "pass", fmt.Sprintf("wallet event found (%s)", kindLabel))
 		result.Score++
+
+		// Check for nutzap info (kind 10019)
+		walletInfo := &WalletCheckInfo{WalletKind: walletKind}
+		_, nutzapEvt := fetchKind(ctx, pk, 10019)
+		if nutzapEvt != nil {
+			walletInfo.HasNutzap = true
+
+			// Extract mints and P2PK pubkey from kind 10019
+			var mintURLs []string
+			for _, tag := range nutzapEvt.Tags {
+				if len(tag) >= 2 && tag[0] == "mint" {
+					mintURLs = append(mintURLs, tag[1])
+				}
+				if len(tag) >= 2 && tag[0] == "pubkey" {
+					walletInfo.P2PKPubkey = tag[1]
+				}
+			}
+
+			if len(mintURLs) > 0 {
+				// Validate mints (don't fail check, just report status)
+				for _, mintURL := range mintURLs {
+					mintInfo := validateMint(ctx, mintURL)
+					walletInfo.Mints = append(walletInfo.Mints, mintInfo)
+				}
+
+				// Report mint status
+				reachable := 0
+				for _, m := range walletInfo.Mints {
+					if m.Reachable {
+						reachable++
+					}
+				}
+
+				mintDetail := fmt.Sprintf("%d mint(s), %d reachable", len(mintURLs), reachable)
+				if reachable == len(mintURLs) {
+					result.addCheck("wallet_mints", "pass", mintDetail)
+				} else if reachable > 0 {
+					result.addCheck("wallet_mints", "warn", mintDetail)
+				} else {
+					result.addCheck("wallet_mints", "warn", mintDetail+" — all mints unreachable")
+				}
+			}
+
+			result.addCheck("nutzap_info", "pass", "kind 10019 found")
+		} else {
+			walletInfo.HasNutzap = false
+			result.addCheck("nutzap_info", "warn", "wallet exists but no kind 10019 (nutzap info) — others can't send you nutzaps")
+		}
+
+		result.Wallet = walletInfo
 	} else {
 		result.addCheck("nip60_wallet", "fail", "no NIP-60 wallet found")
 	}
@@ -502,6 +571,23 @@ func printCheckResult(r CheckResult) {
 	for _, c := range r.Checks {
 		icon := statusIcon[c.Status]
 		fmt.Printf("  %s %s: %s\n", icon, c.Name, c.Detail)
+	}
+
+	// Show wallet mint details if available
+	if r.Wallet != nil && len(r.Wallet.Mints) > 0 {
+		fmt.Println()
+		fmt.Println("  Wallet mints:")
+		for _, m := range r.Wallet.Mints {
+			if m.Reachable {
+				name := m.Name
+				if name == "" {
+					name = "unnamed"
+				}
+				fmt.Printf("    ✓ %s (%s)\n", m.URL, name)
+			} else {
+				fmt.Printf("    ✗ %s (unreachable)\n", m.URL)
+			}
+		}
 	}
 
 	fmt.Println()
