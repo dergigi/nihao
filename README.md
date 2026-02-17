@@ -26,6 +26,11 @@ echo $NSEC | nihao --stdin --name "MyAgent"
 # Setup with custom mints
 nihao --mint https://mint.minibits.cash/Bitcoin --mint https://mint.coinos.io
 
+# Store nsec securely via external command
+nihao --name "MyAgent" --nsec-cmd "pass insert -e nostr/myagent"
+nihao --nsec-cmd "age -r age1... -o ~/.nostr/nsec.age"
+nihao --nsec-cmd "secret-tool store --label='nostr nsec' service nostr account default"
+
 # Setup without wallet
 nihao --no-wallet
 
@@ -63,6 +68,7 @@ Override with `--relays wss://my.relay,wss://other.relay`.
 - [x] Mint validation (NUT-04, NUT-05, NUT-11, sat keyset)
 - [x] `--mint <url>` flag to override default mints
 - [x] `--no-wallet` flag to skip wallet setup
+- [x] `--nsec-cmd` for secure key storage via external command
 - [ ] NIP-05 setup assistance
 
 ### Check (`nihao check <npub>`)
@@ -92,6 +98,41 @@ Override with `--relays wss://my.relay,wss://other.relay`.
 - [x] Meaningful exit codes
 - [ ] `nihao check` without args (read local key)
 - [ ] OpenClaw skill wrapper
+
+## Key Management
+
+nihao does **not** store your nsec. By design, it generates (or accepts) a secret key, uses it to sign events, and then outputs it — but never writes it to disk.
+
+Use `--nsec-cmd` to pipe the nsec to any storage backend:
+
+```bash
+# GNU pass (GPG-encrypted, git-friendly)
+nihao --nsec-cmd "pass insert -e nostr/myidentity"
+
+# age (simple file encryption)
+nihao --nsec-cmd "age -r age1abc... -o ~/keys/nostr.age"
+
+# Linux keyring (GNOME Keyring / KDE Wallet)
+nihao --nsec-cmd "secret-tool store --label='nostr' service nostr account default"
+
+# macOS Keychain
+nihao --nsec-cmd "security add-generic-password -a nostr -s nsec -w \$(cat)"
+
+# Simple file (chmod 600 — least secure, but works everywhere)
+nihao --nsec-cmd "tee ~/.nostr/nsec > /dev/null && chmod 600 ~/.nostr/nsec"
+```
+
+The command receives the nsec on **stdin** (one line, followed by EOF). It runs through `sh -c`, so pipes and redirections work. If the command exits non-zero, nihao aborts before publishing anything.
+
+### For Agents
+
+Agents should always use `--nsec-cmd` (or `--json` and handle storage themselves). Example with `pass`:
+
+```bash
+nihao --name "my-bot" --json --nsec-cmd "pass insert -e nostr/my-bot"
+```
+
+The nsec is stored *before* any events are published, so if storage fails, no identity is created on relays.
 
 ## Built with
 

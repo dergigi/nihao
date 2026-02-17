@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"sync"
 	"time"
@@ -85,6 +86,7 @@ SETUP FLAGS:
   --quiet, -q               Suppress non-JSON, non-error output
   --sec <nsec|hex>          Use existing secret key instead of generating
   --stdin                   Read secret key from stdin (for piping)
+  --nsec-cmd <command>      Pipe nsec to this command for secure storage
 
 CHECK FLAGS:
   --json                    Output result as JSON
@@ -137,6 +139,16 @@ func runSetup(args []string) {
 	pk := sk.Public()
 	nsec := nip19.EncodeNsec(sk)
 	npub := nip19.EncodeNpub(pk)
+
+	// Store nsec via external command if requested
+	if opts.nsecCmd != "" {
+		logln("🔐 Storing nsec via external command...")
+		if err := runNsecCmd(opts.nsecCmd, nsec); err != nil {
+			fatal("nsec-cmd failed: %s", err)
+		}
+		logln("   ✓ nsec stored successfully")
+		logln()
+	}
 
 	log("   npub: %s", npub)
 	logln()
@@ -450,6 +462,7 @@ type setupOpts struct {
 	jsonOutput bool
 	quiet      bool
 	noWallet   bool
+	nsecCmd    string
 }
 
 func parseSetupFlags(args []string) setupOpts {
@@ -509,6 +522,11 @@ func parseSetupFlags(args []string) setupOpts {
 			opts.quiet = true
 		case "--stdin":
 			opts.stdin = true
+		case "--nsec-cmd":
+			if i+1 < len(args) {
+				opts.nsecCmd = args[i+1]
+				i++
+			}
 		}
 	}
 	return opts
@@ -528,6 +546,31 @@ func readStdin() string {
 		return scanner.Text()
 	}
 	return ""
+}
+
+// runNsecCmd pipes the nsec to an external command via stdin.
+// The command is executed through the shell (sh -c) so pipes and
+// redirections work. The nsec is written to the command's stdin
+// followed by a newline, then stdin is closed.
+func runNsecCmd(cmdStr string, nsec string) error {
+	cmd := exec.Command("sh", "-c", cmdStr)
+	cmd.Stdout = os.Stderr // show command output on stderr (not stdout, to avoid polluting --json)
+	cmd.Stderr = os.Stderr
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return fmt.Errorf("failed to create stdin pipe: %w", err)
+	}
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start command: %w", err)
+	}
+	if _, err := fmt.Fprintln(stdin, nsec); err != nil {
+		return fmt.Errorf("failed to write nsec to command: %w", err)
+	}
+	stdin.Close()
+	if err := cmd.Wait(); err != nil {
+		return fmt.Errorf("command exited with error: %w", err)
+	}
+	return nil
 }
 
 func fatal(format string, args ...any) {
