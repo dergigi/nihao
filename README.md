@@ -118,6 +118,21 @@ nihao --nsec-cmd "secret-tool store --label='nostr' service nostr account defaul
 # macOS Keychain
 nihao --nsec-cmd "security add-generic-password -a nostr -s nsec -w \$(cat)"
 
+# 1Password (op CLI)
+nihao --nsec-cmd "op item create --category=password --title='nostr nsec' password=\$(cat)"
+
+# Bitwarden (bw CLI — must be unlocked first)
+nihao --nsec-cmd "bw create item \$(jq -n --arg n \"\$(cat)\" '{type:2,secureNote:{type:0},name:\"nostr-nsec\",notes:\$n}' | bw encode)"
+
+# KeePassXC (keepassxc-cli)
+nihao --nsec-cmd "keepassxc-cli add -q ~/Passwords.kdbx nostr/nsec"
+
+# Hashicorp Vault
+nihao --nsec-cmd 'vault kv put secret/nostr nsec=$(cat)'
+
+# gopass (pass-compatible, written in Go)
+nihao --nsec-cmd "gopass insert -f nostr/nsec"
+
 # Simple file (chmod 600 — least secure, but works everywhere)
 nihao --nsec-cmd "tee ~/.nostr/nsec > /dev/null && chmod 600 ~/.nostr/nsec"
 ```
@@ -133,6 +148,30 @@ nihao --name "my-bot" --json --nsec-cmd "pass insert -e nostr/my-bot"
 ```
 
 The nsec is stored *before* any events are published, so if storage fails, no identity is created on relays.
+
+### Retrieving Your nsec
+
+To use a stored nsec with nihao later (e.g. for updates), pipe it back in via `--stdin`:
+
+```bash
+# GNU pass / gopass
+pass nostr/myidentity | nihao --stdin --name "NewName"
+
+# 1Password
+op item get 'nostr nsec' --fields password | nihao --stdin --name "NewName"
+
+# Bitwarden
+bw get notes nostr-nsec | nihao --stdin --name "NewName"
+
+# KeePassXC
+keepassxc-cli show -s ~/Passwords.kdbx nostr/nsec | nihao --stdin --name "NewName"
+
+# Hashicorp Vault
+vault kv get -field=nsec secret/nostr | nihao --stdin --name "NewName"
+
+# age-encrypted file
+age -d ~/keys/nostr.age | nihao --stdin --name "NewName"
+```
 
 ## Built with
 
