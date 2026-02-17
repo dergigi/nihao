@@ -7,6 +7,8 @@ description: Set up and verify Nostr identities using the nihao CLI. Use when cr
 
 Nostr identity setup and health-check CLI. Single binary, non-interactive, agent-friendly.
 
+Source: https://github.com/dergigi/nihao
+
 ## Install
 
 ```bash
@@ -15,23 +17,20 @@ go install github.com/dergigi/nihao@latest
 
 Verify: `nihao version`
 
-If `go` is unavailable, download the binary from https://github.com/dergigi/nihao/releases.
-
 ## Setup — Create a New Identity
 
 ```bash
-nihao --name "AgentName" --about "I do things" --json --nsec-cmd "pass insert -e nostr/agentname"
+nihao --name "AgentName" --about "I do things" --json
 ```
 
 This single command:
-1. Generates a keypair (or use `--sec`/`--stdin` for existing key)
+1. Generates a keypair (or use `--sec` / `--stdin` for an existing key)
 2. Publishes profile metadata (kind 0)
 3. Publishes relay list (kind 10002) to default relays
 4. Publishes follow list (kind 3)
 5. Sets up a NIP-60 Cashu wallet (kind 17375 + kind 10019)
 6. Auto-sets lud16 to `<npub>@npub.cash`
 7. Posts a first note with `#nihao` hashtag
-8. Pipes nsec to `--nsec-cmd` for secure storage (runs before publishing — aborts on failure)
 
 ### Key Flags
 
@@ -46,28 +45,21 @@ This single command:
 | `--relays <r1,r2,...>` | Override default relays |
 | `--mint <url>` | Custom Cashu mint (repeatable) |
 | `--no-wallet` | Skip NIP-60 wallet setup |
-| `--sec <nsec\|hex>` | Use existing secret key |
-| `--stdin` | Read secret key from stdin |
-| `--nsec-cmd <cmd>` | Pipe nsec to command for secure storage |
+| `--sec <nsec>` | Use existing key |
+| `--stdin` | Read key from stdin |
+| `--nsec-cmd <cmd>` | Delegate key storage to an external tool (e.g. `pass`, `age`) |
 | `--json` | JSON output (for parsing) |
 | `--quiet` | Suppress all non-JSON, non-error output |
 
-### Secure Key Storage
+### Key Storage
 
-Always use `--nsec-cmd` to store the nsec. The command receives the nsec on stdin (one line + EOF):
+Use `--nsec-cmd` to delegate key storage to a password manager. The tool receives the key on stdin. Runs before publishing — if it fails, nihao aborts and nothing is published.
+
+Examples:
 
 ```bash
-# GNU pass
---nsec-cmd "pass insert -e nostr/myagent"
-
-# age encryption
---nsec-cmd "age -r age1... -o ~/.nostr/nsec.age"
-
-# Linux keyring
---nsec-cmd "secret-tool store --label='nostr' service nostr account default"
-
-# File (least secure)
---nsec-cmd "tee ~/.nostr/nsec > /dev/null && chmod 600 ~/.nostr/nsec"
+nihao --name "mybot" --nsec-cmd "pass insert -e nostr/mybot"
+nihao --name "mybot" --nsec-cmd "age -r age1... -o key.age"
 ```
 
 ## Check — Audit an Existing Identity
@@ -94,13 +86,11 @@ Use `--json` for structured output. Setup returns `{npub, nsec, pubkey, relays, 
 
 ## Agent Workflow
 
-Typical agent flow:
-
 ```bash
-# Create identity and store key
-nihao --name "mybot" --json --quiet --nsec-cmd "pass insert -e nostr/mybot" > /tmp/nihao-result.json
+# Create identity
+nihao --name "mybot" --json --quiet > /tmp/nihao-result.json
 
-# Later: verify identity health
+# Verify identity health
 nihao check npub1... --json --quiet
 ```
 
