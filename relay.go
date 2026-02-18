@@ -53,33 +53,55 @@ type RelayScore struct {
 	Issues       []string    `json:"issues,omitempty"`
 }
 
-// Known specialized relays that shouldn't receive all event kinds
-var specializedRelays = map[string]string{
-	"wss://purplepag.es":              "outbox",   // NIP-65 only (kind 10002, kind 0, kind 3)
-	"wss://relay.nos.social":          "inbox",    // read-heavy
-	"wss://search.nos.today":          "search",   // NIP-50 search relay
-	"wss://inbox.relays.land":         "inbox",    // mention-only inbox
+// ──────────────────────────────────────────────────────────────
+// Relay classification config
+//
+// We classify relays into purposes to decide what events to send
+// where. This avoids publishing kind 1 to purplepag.es, sending
+// events to paid relays that will reject them, etc.
+// ──────────────────────────────────────────────────────────────
+
+// knownRelayPurposes maps specific relay URLs to their purpose.
+var knownRelayPurposes = map[string]string{
+	// Outbox-only: relay list aggregators (accept kind 0, 3, 10002)
+	"wss://purplepag.es": "outbox",
+
+	// Inbox: accept mentions/replies but reject general posts
+	"wss://relay.nos.social":  "inbox",
+	"wss://inbox.relays.land": "inbox",
+
+	// Search: NIP-50 search relays
+	"wss://search.nos.today": "search",
+
+	// Paid: accept connections but reject writes without subscription
+	"wss://premium.primal.net": "paid",
+	"wss://nostr.wine":         "paid",
 }
 
-// Relay URL substrings that indicate inbox/specialized relays (discovered dynamically)
-var inboxPatterns = []string{
-	"/inbox",        // e.g. pyramid.fiatjaf.com/inbox
-	"nwc.",          // NWC endpoints, not general relays
+// urlPatterns maps URL substrings to relay purposes.
+// Checked in order when no exact match is found.
+var urlPatterns = []struct {
+	pattern string
+	purpose string
+}{
+	{"/inbox", "inbox"},     // e.g. pyramid.fiatjaf.com/inbox
+	{"nwc.", "nwc"},         // NWC endpoints, not general relays
+	{"pyramid.", "paid"},    // pyramid relays require membership
+	{"premium.", "paid"},    // premium tier relays
 }
 
-// Known paid/auth-required relays that accept connections but reject writes
-var paidRelays = map[string]bool{
-	"wss://premium.primal.net": true,
-	"wss://nostr.wine":         true,
+// wellConnectedNpubs are hex pubkeys of well-known, well-connected users.
+// Used to sample relay lists (kind 10002) and DM relays (kind 10050)
+// during discovery.
+var wellConnectedNpubs = []string{
+	"3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d", // fiatjaf
+	"32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245", // jb55
+	"e88a691e98d9987c964521dff60025f60700378a4879180dcbbb4a5027850411", // NVK
+	"04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9", // odell
+	"82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2", // jack
 }
 
-// Relay URL patterns that indicate restricted relays
-var restrictedPatterns = []string{
-	"pyramid.",  // pyramid relays require membership
-	"premium.",  // premium relays require payment
-}
-
-// Outbox-compatible kinds (safe to send to purplepag.es etc)
+// outboxKinds are the only event kinds sent to outbox-purpose relays.
 var outboxKinds = map[nostr.Kind]bool{
 	0:     true, // profile metadata
 	3:     true, // follow list
@@ -100,27 +122,14 @@ func ShouldPublishTo(relayURL string, kind nostr.Kind) bool {
 	return true // general relay, send everything
 }
 
-// classifyRelay determines a relay's purpose
+// classifyRelay determines a relay's purpose.
 func classifyRelay(relayURL string) string {
-	// Check exact matches first
-	if purpose, ok := specializedRelays[relayURL]; ok {
+	if purpose, ok := knownRelayPurposes[relayURL]; ok {
 		return purpose
 	}
-	if paidRelays[relayURL] {
-		return "paid"
-	}
-	// Check URL patterns
-	for _, pattern := range inboxPatterns {
-		if strings.Contains(relayURL, pattern) {
-			if strings.Contains(pattern, "nwc") {
-				return "nwc"
-			}
-			return "inbox"
-		}
-	}
-	for _, pattern := range restrictedPatterns {
-		if strings.Contains(relayURL, pattern) {
-			return "paid"
+	for _, p := range urlPatterns {
+		if strings.Contains(relayURL, p.pattern) {
+			return p.purpose
 		}
 	}
 	return "general"
@@ -259,17 +268,6 @@ func calculateRelayScore(rs RelayScore) float64 {
 		rs.Issues = append(rs.Issues, "payment required")
 	}
 
-	// Bonus for known reliable relays (+0.15)
-	reliable := map[string]bool{
-		"wss://relay.damus.io":   true,
-		"wss://relay.primal.net": true,
-		"wss://nos.lol":          true,
-		"wss://purplepag.es":     true,
-	}
-	if reliable[rs.URL] {
-		score += 0.15
-	}
-
 	if score > 1.0 {
 		score = 1.0
 	}
@@ -299,15 +297,6 @@ func ScoreRelays(urls []string) []RelayScore {
 // DiscoverRelays fetches relay lists (kind 10002) from well-known npubs
 // and returns a deduplicated, scored list of relays
 func DiscoverRelays(seedRelays []string) []RelayScore {
-	// Well-known, well-connected npubs to sample relay lists from
-	wellKnownHexKeys := []string{
-		"3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d", // fiatjaf
-		"32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245", // jb55
-		"e88a691e98d9987c964521dff60025f60700378a4879180dcbbb4a5027850411", // NVK
-		"04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9", // odell
-		"82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2", // jack
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -316,7 +305,7 @@ func DiscoverRelays(seedRelays []string) []RelayScore {
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
-	for _, hexKey := range wellKnownHexKeys {
+	for _, hexKey := range wellConnectedNpubs {
 		wg.Add(1)
 		go func(hex string) {
 			defer wg.Done()
@@ -496,14 +485,6 @@ func MarkedRelayURLs(relays []MarkedRelay) []string {
 
 // DiscoverDMRelays looks for kind 10050 events from well-connected npubs
 func DiscoverDMRelays(seedRelays []string) []string {
-	wellKnownHexKeys := []string{
-		"3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d", // fiatjaf
-		"32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245", // jb55
-		"e88a691e98d9987c964521dff60025f60700378a4879180dcbbb4a5027850411", // NVK
-		"04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9", // odell
-		"82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2", // jack
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -511,7 +492,7 @@ func DiscoverDMRelays(seedRelays []string) []string {
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
-	for _, hexKey := range wellKnownHexKeys {
+	for _, hexKey := range wellConnectedNpubs {
 		wg.Add(1)
 		go func(hex string) {
 			defer wg.Done()
