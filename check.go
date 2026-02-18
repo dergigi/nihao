@@ -41,7 +41,10 @@ type CheckItem struct {
 
 func runCheck(target string, jsonOutput bool, quiet bool) {
 	if target == "" {
-		fatal("usage: nihao check <npub|hex>")
+		target = os.Getenv("NOSTR_NPUB")
+	}
+	if target == "" {
+		fatal("usage: nihao check <npub|hex>\n\nTip: set NOSTR_NPUB to skip the argument")
 	}
 
 	pk, err := parsePubkey(target)

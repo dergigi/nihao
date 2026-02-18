@@ -108,7 +108,7 @@ Override with `--relays wss://my.relay,wss://other.relay`.
 - [x] Single binary, zero dependencies
 - [x] Non-interactive by default
 - [x] Meaningful exit codes
-- [ ] `nihao check` without args (read local key)
+- [x] `nihao check` without args (reads `NOSTR_NPUB` env var)
 - [x] OpenClaw skill wrapper
 
 ## Key Management
