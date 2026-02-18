@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] - 2026-02-18
+
+### Added
+- **Relay discovery:** `--discover` flag samples kind 10002 lists from well-connected npubs (fiatjaf, jb55, NVK, odell, jack) and scores relays by latency, NIP-11 support, and reachability
+- **Relay quality analysis in check:** `nihao check` now tests each relay in the npub's kind 10002 — latency, NIP-11, reachability with per-relay detail output
+- **Kind-aware publishing:** specialized relays (e.g. purplepag.es) only receive compatible event kinds — no more kind 1 rejections
+- **Relay scoring engine:** `relay.go` with NIP-11 fetching, WebSocket latency measurement, and 0.0–1.0 scoring
+- **Smart relay selection:** `SelectRelays` picks optimal set guaranteeing at least one outbox relay
+
+### Fixed
+- purplepag.es no longer receives kind 1 events (was causing rejections)
+
 ## [0.7.0] - 2026-02-18
 
 ### Changed
