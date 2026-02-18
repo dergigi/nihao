@@ -55,28 +55,75 @@ type RelayScore struct {
 
 // Known specialized relays that shouldn't receive all event kinds
 var specializedRelays = map[string]string{
-	"wss://purplepag.es":      "outbox",   // NIP-65 only (kind 10002, kind 0, kind 3)
-	"wss://relay.nos.social":  "inbox",    // read-heavy
-	"wss://search.nos.today":  "search",   // NIP-50 search relay
+	"wss://purplepag.es":              "outbox",   // NIP-65 only (kind 10002, kind 0, kind 3)
+	"wss://relay.nos.social":          "inbox",    // read-heavy
+	"wss://search.nos.today":          "search",   // NIP-50 search relay
+	"wss://inbox.relays.land":         "inbox",    // mention-only inbox
+}
+
+// Relay URL substrings that indicate inbox/specialized relays (discovered dynamically)
+var inboxPatterns = []string{
+	"/inbox",        // e.g. pyramid.fiatjaf.com/inbox
+	"nwc.",          // NWC endpoints, not general relays
+}
+
+// Known paid/auth-required relays that accept connections but reject writes
+var paidRelays = map[string]bool{
+	"wss://premium.primal.net": true,
+	"wss://nostr.wine":         true,
+}
+
+// Relay URL patterns that indicate restricted relays
+var restrictedPatterns = []string{
+	"pyramid.",  // pyramid relays require membership
+	"premium.",  // premium relays require payment
 }
 
 // Outbox-compatible kinds (safe to send to purplepag.es etc)
-var outboxKinds = map[int]bool{
+var outboxKinds = map[nostr.Kind]bool{
 	0:     true, // profile metadata
 	3:     true, // follow list
 	10002: true, // relay list
 }
 
 // ShouldPublishTo checks if a given event kind should be sent to a relay
-func ShouldPublishTo(relayURL string, kind int) bool {
-	purpose, isSpecialized := specializedRelays[relayURL]
-	if !isSpecialized {
-		return true // general relay, send everything
-	}
-	if purpose == "outbox" {
+func ShouldPublishTo(relayURL string, kind nostr.Kind) bool {
+	purpose := classifyRelay(relayURL)
+	switch purpose {
+	case "outbox":
 		return outboxKinds[kind]
+	case "inbox":
+		return false // inbox relays need mentions, skip for setup
+	case "search", "nwc", "paid":
+		return false
 	}
-	return true // unknown specialized type, allow
+	return true // general relay, send everything
+}
+
+// classifyRelay determines a relay's purpose
+func classifyRelay(relayURL string) string {
+	// Check exact matches first
+	if purpose, ok := specializedRelays[relayURL]; ok {
+		return purpose
+	}
+	if paidRelays[relayURL] {
+		return "paid"
+	}
+	// Check URL patterns
+	for _, pattern := range inboxPatterns {
+		if strings.Contains(relayURL, pattern) {
+			if strings.Contains(pattern, "nwc") {
+				return "nwc"
+			}
+			return "inbox"
+		}
+	}
+	for _, pattern := range restrictedPatterns {
+		if strings.Contains(relayURL, pattern) {
+			return "paid"
+		}
+	}
+	return "general"
 }
 
 // fetchNIP11 fetches the NIP-11 relay information document
@@ -140,10 +187,8 @@ func ScoreRelay(relayURL string) RelayScore {
 		Purpose: "general",
 	}
 
-	// Check if it's a known specialized relay
-	if purpose, ok := specializedRelays[relayURL]; ok {
-		rs.Purpose = purpose
-	}
+	// Classify relay purpose
+	rs.Purpose = classifyRelay(relayURL)
 
 	// Fetch NIP-11
 	info, nip11Latency, err := fetchNIP11(relayURL)
@@ -275,10 +320,13 @@ func DiscoverRelays(seedRelays []string) []RelayScore {
 		wg.Add(1)
 		go func(hex string) {
 			defer wg.Done()
-			pk := nostr.PublicKey(hex)
+			pk, err := nostr.PubKeyFromHex(hex)
+			if err != nil {
+				return
+			}
 			filter := nostr.Filter{
-				Authors: []string{pk.Hex()},
-				Kinds:   []int{10002},
+				Authors: []nostr.PubKey{pk},
+				Kinds:   []nostr.Kind{10002},
 				Limit:   1,
 			}
 
@@ -346,6 +394,11 @@ func SelectRelays(candidates []RelayScore, maxCount int) []string {
 		}
 		if rs.PaymentRequired {
 			continue // skip paid relays for default setup
+		}
+
+		// Skip inbox, search, NWC, paid relays — not useful for general publishing
+		if rs.Purpose == "inbox" || rs.Purpose == "search" || rs.Purpose == "nwc" || rs.Purpose == "paid" {
+			continue
 		}
 
 		// Ensure we have at least one outbox relay
