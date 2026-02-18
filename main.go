@@ -371,10 +371,20 @@ func publishToRelays(evt nostr.Event, relays []string, quiet ...bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
 
-	results := make(chan publishResult, len(relays))
+	// Filter relays by event kind (e.g. don't send kind 1 to purplepag.es)
+	var targetRelays []string
+	for _, url := range relays {
+		if ShouldPublishTo(url, evt.Kind) {
+			targetRelays = append(targetRelays, url)
+		} else if !silent {
+			fmt.Printf("   ⊘ %s (skipped, %s only)\n", url, specializedRelays[url])
+		}
+	}
+
+	results := make(chan publishResult, len(targetRelays))
 	var wg sync.WaitGroup
 
-	for _, url := range relays {
+	for _, url := range targetRelays {
 		wg.Add(1)
 		go func(url string) {
 			defer wg.Done()
