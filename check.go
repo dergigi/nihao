@@ -154,17 +154,61 @@ func runCheck(target string, jsonOutput bool, quiet bool) {
 	// Check 4: Relay list (kind 10002)
 	_, relayEvt := fetchKind(ctx, pk, 10002)
 	if relayEvt != nil {
-		relayCount := 0
+		var relayURLs []string
 		for _, tag := range relayEvt.Tags {
 			if len(tag) >= 2 && tag[0] == "r" {
-				relayCount++
+				relayURLs = append(relayURLs, tag[1])
 			}
 		}
+		relayCount := len(relayURLs)
 		if relayCount >= 2 {
 			result.addCheck("relay_list", "pass", fmt.Sprintf("%d relays", relayCount))
 			result.Score++
-		} else {
+		} else if relayCount > 0 {
 			result.addCheck("relay_list", "warn", fmt.Sprintf("only %d relay(s)", relayCount))
+		} else {
+			result.addCheck("relay_list", "fail", "no kind 10002 found")
+		}
+
+		// Score each relay for quality analysis
+		if relayCount > 0 {
+			scores := ScoreRelays(relayURLs)
+			reachable := 0
+			var unreachableURLs []string
+			var totalLatency int64
+			for _, rs := range scores {
+				if rs.Reachable {
+					reachable++
+					totalLatency += rs.LatencyMs
+				} else {
+					unreachableURLs = append(unreachableURLs, rs.URL)
+				}
+			}
+
+			if reachable == relayCount {
+				avgLatency := totalLatency / int64(reachable)
+				result.addCheck("relay_quality", "pass", fmt.Sprintf("all %d reachable, avg %dms", reachable, avgLatency))
+			} else if reachable > 0 {
+				result.addCheck("relay_quality", "warn", fmt.Sprintf("%d/%d reachable, %d dead: %s",
+					reachable, relayCount, len(unreachableURLs), strings.Join(unreachableURLs, ", ")))
+			} else {
+				result.addCheck("relay_quality", "fail", "no relays reachable")
+			}
+
+			// Print per-relay details in non-quiet mode
+			if !jsonOutput && !quiet {
+				for _, rs := range scores {
+					if rs.Reachable {
+						nip11Status := "no NIP-11"
+						if rs.HasNIP11 {
+							nip11Status = "NIP-11 ✓"
+						}
+						fmt.Printf("      %s — %dms, %s, %.0f%%\n", rs.URL, rs.LatencyMs, nip11Status, rs.Score*100)
+					} else {
+						fmt.Printf("      %s — unreachable ✗\n", rs.URL)
+					}
+				}
+			}
 		}
 	} else {
 		result.addCheck("relay_list", "fail", "no kind 10002 found")

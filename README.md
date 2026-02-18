@@ -60,7 +60,9 @@ New identities are published to a curated set of reliable relays:
 - `wss://nos.lol` — solid general-purpose
 - `wss://purplepag.es` — NIP-65 relay list aggregator (outbox model)
 
-Override with `--relays wss://my.relay,wss://other.relay`.
+Override with `--relays wss://my.relay,wss://other.relay`, or use `--discover` to
+automatically find relays from well-connected npubs and score them by latency,
+NIP-11 support, and reachability.
 
 ## What You Get
 
@@ -81,6 +83,8 @@ Override with `--relays wss://my.relay,wss://other.relay`.
 - [x] `--mint <url>` flag to override default mints
 - [x] `--no-wallet` flag to skip wallet setup
 - [x] `--nsec-cmd` for secure key storage via external command
+- [x] `--discover` flag to find relays from well-connected npubs
+- [x] Relay kind filtering (specialized relays only get compatible events)
 - [ ] NIP-05 setup assistance
 
 ### Check (`nihao check <npub>`) — audit any identity
@@ -99,9 +103,9 @@ Override with `--relays wss://my.relay,wss://other.relay`.
 - [x] `--json` output
 - [x] `--quiet` mode for agent consumption
 - [x] Meaningful exit codes (0 = healthy, 1 = issues found)
-- [ ] Relay quality analysis
+- [x] Relay quality analysis (NIP-11, latency, reachability scoring)
+- [x] Relay discovery from well-connected npubs (sample kind 10002 lists)
 - [ ] Dynamic relay discovery (NIP-66 relay monitors)
-- [ ] Relay discovery from well-connected npubs (sample kind 10002 lists)
 
 ### General
 

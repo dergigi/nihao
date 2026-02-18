@@ -82,6 +82,7 @@ SETUP FLAGS:
   --nip05 <user@domain>     NIP-05 identifier
   --lud16 <user@domain>     Lightning address
   --relays <r1,r2,...>      Comma-separated relay URLs
+  --discover                Discover relays from well-connected npubs
   --json                    Output result as JSON
   --quiet, -q               Suppress non-JSON, non-error output
   --sec <nsec|hex>          Use existing secret key instead of generating
@@ -195,6 +196,22 @@ func runSetup(args []string) {
 	relays := defaultRelays
 	if opts.relays != nil {
 		relays = opts.relays
+	} else if opts.discover {
+		logln("🔍 Discovering relays...")
+		discovered := DiscoverRelays(defaultRelays)
+		if len(discovered) > 0 {
+			selected := SelectRelays(discovered, 5)
+			if len(selected) > 0 {
+				relays = selected
+				for _, rs := range discovered {
+					if rs.Reachable {
+						logln(fmt.Sprintf("   %.0f%% %s (%dms, %s)", rs.Score*100, rs.URL, rs.LatencyMs, rs.Purpose))
+					}
+				}
+				logln(fmt.Sprintf("   → selected %d relays", len(relays)))
+				logln()
+			}
+		}
 	}
 
 	logln("👤 Publishing profile metadata (kind 0)...")
@@ -473,6 +490,7 @@ type setupOpts struct {
 	quiet      bool
 	noWallet   bool
 	nsecCmd    string
+	discover   bool
 }
 
 func parseSetupFlags(args []string) setupOpts {
@@ -537,6 +555,8 @@ func parseSetupFlags(args []string) setupOpts {
 				opts.nsecCmd = args[i+1]
 				i++
 			}
+		case "--discover":
+			opts.discover = true
 		}
 	}
 	return opts
