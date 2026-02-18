@@ -21,6 +21,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **`nihao check` DM relay detection**: Checks for kind 10050, warns if missing
 - **Relay purpose display**: Per-relay detail output now shows read/write/read+write purpose
 
+## [0.9.0] - 2026-02-18
+
+### Added
+- NIP-65 relay markers: kind 10002 now uses proper read/write tags
+- Kind 10050 DM inbox relay list: published during setup per NIP-17
+- `--dm-relays` and `--no-dm-relays` flags
+- DM relay discovery from well-connected npubs
+- `nihao check` audits relay markers (warns if all bare) and DM relays (warns if missing)
+- Per-relay purpose display in check output (read, write, read+write)
+
+### Changed
+- **Connection pooling:** setup connects to relays once and reuses for all publishes (was 7+ separate connections)
+- **Rate limiting:** 300ms delay between publishes to avoid damus rate-limiting on fresh npubs
+- **Relay config cleanup:** consolidated all hardcoded relay maps into clear config blocks at top of relay.go
+- **Scoring fairness:** removed reliability bonus — scores based purely on observed metrics (latency, NIP-11, reachability)
+- `wellConnectedNpubs` extracted as shared constant (was duplicated)
+- `classifyRelay()` simplified to single lookup path
+
 ## [0.8.0] - 2026-02-18
 
 ### Added
