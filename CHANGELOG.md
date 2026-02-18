@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Wallet mint details in `--json` output (URLs, names, reachability, NUT support)
 - Curated default mints: minibits, coinos, macadamia
 
-## [0.5.0] - 2025-02-16
+## [0.5.0] - 2026-02-16
 
 ### Added
 - `--quiet` / `-q` flag for agent-friendly silent mode (setup and check)
@@ -35,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Fixed
 - README health score range corrected from 0–6 to 0–8
 
-## [0.4.0] - 2025-02-16
+## [0.4.0] - 2026-02-16
 
 ### Added
 - Image hosting tier scoring: blossom (best) > own domain (root NIP-05) > third-party (warn) > broken (fail)
@@ -45,14 +45,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Fixed
 - Bare domain NIP-05 (e.g. `dergigi.com`) now resolves correctly as `_@domain`
 
-## [0.3.0] - 2025-02-16
+## [0.3.0] - 2026-02-16
 
 ### Added
 - First note (kind 1) posted automatically after identity setup
 - `#nihao` hashtag tag on first note for discoverability
 - 26 randomized multilingual greetings, each fully in its native language
 
-## [0.2.0] - 2025-02-16
+## [0.2.0] - 2026-02-16
 
 ### Added
 - Profile image health checks (404 detection, file size, Blossom hosting)
@@ -70,7 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - relay.nostr.band from defaults (unmaintained)
 - relay.snort.social from defaults (unreliable)
 
-## [0.1.0] - 2025-02-16
+## [0.1.0] - 2026-02-16
 
 ### Added
 - Initial release
