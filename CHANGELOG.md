@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.9.0] - 2026-02-18
+
+### Added
+- **NIP-65 read/write markers**: Kind 10002 relay list now uses proper `read`/`write` markers per NIP-65
+  - General relays (damus, primal, nos.lol) marked as both read+write
+  - purplepag.es excluded from kind 10002 (still used for publishing outbox events)
+  - `--discover` classifies relays automatically
+- **Kind 10050 DM relay list**: Publishes DM inbox relays per NIP-17
+  - Default DM relays: inbox.nostr.wine, auth.nostr1.com
+  - `--dm-relays <r1,r2,...>` flag to override defaults
+  - `--no-dm-relays` flag to skip DM relay publishing
+  - `--discover` samples kind 10050 from well-connected npubs
+- **`nihao check` relay marker analysis**: Warns if all relays have bare tags (no read/write markers)
+- **`nihao check` DM relay detection**: Checks for kind 10050, warns if missing
+- **Relay purpose display**: Per-relay detail output now shows read/write/read+write purpose
+
 ## [0.8.0] - 2026-02-18
 
 ### Added

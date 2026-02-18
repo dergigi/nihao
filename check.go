@@ -151,15 +151,33 @@ func runCheck(target string, jsonOutput bool, quiet bool) {
 		result.addCheck("lud16", "fail", "no profile")
 	}
 
-	// Check 4: Relay list (kind 10002)
+	// Check 4: Relay list (kind 10002) with NIP-65 marker analysis
 	_, relayEvt := fetchKind(ctx, pk, 10002)
 	if relayEvt != nil {
 		var relayURLs []string
+		hasMarkers := false
+		allBare := true
+		readCount := 0
+		writeCount := 0
+		bothCount := 0
 		for _, tag := range relayEvt.Tags {
 			if len(tag) >= 2 && tag[0] == "r" {
 				relayURLs = append(relayURLs, tag[1])
+				if len(tag) >= 3 {
+					hasMarkers = true
+					allBare = false
+					switch tag[2] {
+					case "read":
+						readCount++
+					case "write":
+						writeCount++
+					}
+				} else {
+					bothCount++
+				}
 			}
 		}
+		_ = hasMarkers
 		relayCount := len(relayURLs)
 		if relayCount >= 2 {
 			result.addCheck("relay_list", "pass", fmt.Sprintf("%d relays", relayCount))
@@ -168,6 +186,25 @@ func runCheck(target string, jsonOutput bool, quiet bool) {
 			result.addCheck("relay_list", "warn", fmt.Sprintf("only %d relay(s)", relayCount))
 		} else {
 			result.addCheck("relay_list", "fail", "no kind 10002 found")
+		}
+
+		// Check NIP-65 read/write markers
+		if relayCount > 0 {
+			if allBare {
+				result.addCheck("relay_markers", "warn", fmt.Sprintf("all %d relays have no read/write markers — clients may not route DMs/replies correctly", relayCount))
+			} else {
+				parts := []string{}
+				if readCount > 0 {
+					parts = append(parts, fmt.Sprintf("%d read", readCount))
+				}
+				if writeCount > 0 {
+					parts = append(parts, fmt.Sprintf("%d write", writeCount))
+				}
+				if bothCount > 0 {
+					parts = append(parts, fmt.Sprintf("%d both", bothCount))
+				}
+				result.addCheck("relay_markers", "pass", strings.Join(parts, ", "))
+			}
 		}
 
 		// Score each relay for quality analysis
@@ -195,23 +232,53 @@ func runCheck(target string, jsonOutput bool, quiet bool) {
 				result.addCheck("relay_quality", "fail", "no relays reachable")
 			}
 
-			// Print per-relay details in non-quiet mode
+			// Print per-relay details with purpose in non-quiet mode
 			if !jsonOutput && !quiet {
+				// Build marker map from event tags
+				markerMap := make(map[string]string)
+				for _, tag := range relayEvt.Tags {
+					if len(tag) >= 2 && tag[0] == "r" {
+						if len(tag) >= 3 {
+							markerMap[tag[1]] = tag[2]
+						} else {
+							markerMap[tag[1]] = "read+write"
+						}
+					}
+				}
 				for _, rs := range scores {
+					purpose := markerMap[rs.URL]
 					if rs.Reachable {
 						nip11Status := "no NIP-11"
 						if rs.HasNIP11 {
 							nip11Status = "NIP-11 ✓"
 						}
-						fmt.Printf("      %s — %dms, %s, %.0f%%\n", rs.URL, rs.LatencyMs, nip11Status, rs.Score*100)
+						fmt.Printf("      %s — %dms, %s, %.0f%%, %s\n", rs.URL, rs.LatencyMs, nip11Status, rs.Score*100, purpose)
 					} else {
-						fmt.Printf("      %s — unreachable ✗\n", rs.URL)
+						fmt.Printf("      %s — unreachable ✗, %s\n", rs.URL, purpose)
 					}
 				}
 			}
 		}
 	} else {
 		result.addCheck("relay_list", "fail", "no kind 10002 found")
+	}
+
+	// Check 4b: DM relay list (kind 10050)
+	_, dmRelayEvt := fetchKind(ctx, pk, 10050)
+	if dmRelayEvt != nil {
+		var dmRelayURLs []string
+		for _, tag := range dmRelayEvt.Tags {
+			if len(tag) >= 2 && tag[0] == "relay" {
+				dmRelayURLs = append(dmRelayURLs, tag[1])
+			}
+		}
+		if len(dmRelayURLs) > 0 {
+			result.addCheck("dm_relays", "pass", fmt.Sprintf("%d DM relay(s): %s", len(dmRelayURLs), strings.Join(dmRelayURLs, ", ")))
+		} else {
+			result.addCheck("dm_relays", "warn", "kind 10050 found but no relay tags")
+		}
+	} else {
+		result.addCheck("dm_relays", "warn", "no kind 10050 (DM relay list) — others may not be able to send you DMs via NIP-17")
 	}
 
 	// Check 5: Follow list (kind 3)

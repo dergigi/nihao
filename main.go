@@ -83,6 +83,8 @@ SETUP FLAGS:
   --lud16 <user@domain>     Lightning address
   --relays <r1,r2,...>      Comma-separated relay URLs
   --discover                Discover relays from well-connected npubs
+  --dm-relays <r1,r2,...>   Comma-separated DM relay URLs (kind 10050)
+  --no-dm-relays            Skip DM relay list publishing
   --json                    Output result as JSON
   --quiet, -q               Suppress non-JSON, non-error output
   --sec <nsec|hex>          Use existing secret key instead of generating
@@ -193,9 +195,16 @@ func runSetup(args []string) {
 	}
 	evt.Sign(sk)
 
-	relays := defaultRelays
+	// Build marked relay list for kind 10002
+	var markedRelays []MarkedRelay
+	relays := defaultRelays // publishing targets (includes purplepag.es)
+
 	if opts.relays != nil {
 		relays = opts.relays
+		// User-specified relays: mark all as both
+		for _, r := range opts.relays {
+			markedRelays = append(markedRelays, MarkedRelay{URL: r, Marker: RelayMarkerBoth})
+		}
 	} else if opts.discover {
 		logln("🔍 Discovering relays...")
 		discovered := DiscoverRelays(defaultRelays)
@@ -212,27 +221,48 @@ func runSetup(args []string) {
 				logln()
 			}
 		}
+		// Classify discovered relays for kind 10002
+		for _, r := range relays {
+			if mr, ok := ClassifyDiscoveredRelay(r); ok {
+				markedRelays = append(markedRelays, mr)
+			}
+		}
+		// Ensure purplepag.es is in publishing targets but NOT in kind 10002
+		hasPurple := false
+		for _, r := range relays {
+			if r == "wss://purplepag.es" {
+				hasPurple = true
+				break
+			}
+		}
+		if !hasPurple {
+			relays = append(relays, "wss://purplepag.es")
+		}
+	} else {
+		markedRelays = DefaultMarkedRelays()
 	}
 
 	logln("👤 Publishing profile metadata (kind 0)...")
 	publishToRelays(evt, relays, opts.quiet)
 	logln()
 
-	// Step 3: Publish relay list (kind 10002)
-	var relayTags nostr.Tags
-	for _, r := range relays {
-		relayTags = append(relayTags, nostr.Tag{"r", r})
-	}
-
+	// Step 3: Publish relay list (kind 10002) with NIP-65 read/write markers
 	relayEvt := nostr.Event{
 		CreatedAt: nostr.Timestamp(time.Now().Unix()),
 		Kind:      10002,
-		Tags:      relayTags,
+		Tags:      MarkedRelaysToTags(markedRelays),
 		Content:   "",
 	}
 	relayEvt.Sign(sk)
 
 	logln("📡 Publishing relay list (kind 10002)...")
+	for _, mr := range markedRelays {
+		if mr.Marker == RelayMarkerBoth {
+			logln(fmt.Sprintf("   %s (read+write)", mr.URL))
+		} else {
+			logln(fmt.Sprintf("   %s (%s)", mr.URL, mr.Marker))
+		}
+	}
 	publishToRelays(relayEvt, relays, opts.quiet)
 	logln()
 
@@ -248,6 +278,37 @@ func runSetup(args []string) {
 	logln("👥 Publishing follow list (kind 3)...")
 	publishToRelays(followEvt, relays, opts.quiet)
 	logln()
+
+	// Step 4b: Publish DM relay list (kind 10050) per NIP-17
+	if !opts.noDMRelays {
+		dmRelays := DefaultDMRelays
+		if opts.dmRelays != nil {
+			dmRelays = opts.dmRelays
+		} else if opts.discover {
+			logln("🔍 Discovering DM relays...")
+			discovered := DiscoverDMRelays(defaultRelays)
+			if len(discovered) > 0 {
+				dmRelays = discovered
+			}
+		}
+
+		var dmTags nostr.Tags
+		for _, r := range dmRelays {
+			dmTags = append(dmTags, nostr.Tag{"relay", r})
+		}
+
+		dmEvt := nostr.Event{
+			CreatedAt: nostr.Timestamp(time.Now().Unix()),
+			Kind:      10050,
+			Tags:      dmTags,
+			Content:   "",
+		}
+		dmEvt.Sign(sk)
+
+		logln("📬 Publishing DM relay list (kind 10050)...")
+		publishToRelays(dmEvt, relays, opts.quiet)
+		logln()
+	}
 
 	// Step 5: Set up NIP-60 wallet
 	var walletResult *WalletSetupResult
@@ -491,6 +552,8 @@ type setupOpts struct {
 	noWallet   bool
 	nsecCmd    string
 	discover   bool
+	dmRelays   []string
+	noDMRelays bool
 }
 
 func parseSetupFlags(args []string) setupOpts {
@@ -557,6 +620,13 @@ func parseSetupFlags(args []string) setupOpts {
 			}
 		case "--discover":
 			opts.discover = true
+		case "--dm-relays":
+			if i+1 < len(args) {
+				opts.dmRelays = strings.Split(args[i+1], ",")
+				i++
+			}
+		case "--no-dm-relays":
+			opts.noDMRelays = true
 		}
 	}
 	return opts

@@ -53,16 +53,20 @@ nihao check npub1... --json
 
 ## Default Relays
 
-New identities are published to a curated set of reliable relays:
+New identities publish a kind 10002 relay list with proper NIP-65 read/write markers:
 
-- `wss://relay.damus.io` — large, general-purpose
-- `wss://relay.primal.net` — large, general-purpose
-- `wss://nos.lol` — solid general-purpose
-- `wss://purplepag.es` — NIP-65 relay list aggregator (outbox model)
+- `wss://relay.damus.io` — read+write (general-purpose)
+- `wss://relay.primal.net` — read+write (general-purpose)
+- `wss://nos.lol` — read+write (general-purpose)
+- `wss://purplepag.es` — used for publishing outbox events, but NOT advertised in kind 10002 (it's a relay list aggregator)
 
-Override with `--relays wss://my.relay,wss://other.relay`, or use `--discover` to
-automatically find relays from well-connected npubs and score them by latency,
-NIP-11 support, and reachability.
+DM relays (kind 10050, per NIP-17):
+
+- `wss://inbox.nostr.wine` — auth-required inbox relay
+- `wss://auth.nostr1.com` — auth-required inbox relay
+
+Override with `--relays`, `--dm-relays`, or use `--discover` to automatically find
+relays from well-connected npubs.
 
 ## What You Get
 
@@ -85,6 +89,8 @@ NIP-11 support, and reachability.
 - [x] `--nsec-cmd` for secure key storage via external command
 - [x] `--discover` flag to find relays from well-connected npubs
 - [x] Relay kind filtering (specialized relays only get compatible events)
+- [x] NIP-65 read/write markers on kind 10002 relay list
+- [x] Kind 10050 DM relay list (NIP-17) with `--dm-relays` / `--no-dm-relays`
 - [ ] NIP-05 setup assistance
 
 ### Check (`nihao check <npub>`) — audit any identity
@@ -105,6 +111,9 @@ NIP-11 support, and reachability.
 - [x] Meaningful exit codes (0 = healthy, 1 = issues found)
 - [x] Relay quality analysis (NIP-11, latency, reachability scoring)
 - [x] Relay discovery from well-connected npubs (sample kind 10002 lists)
+- [x] NIP-65 relay marker analysis (warn if all bare)
+- [x] Kind 10050 DM relay detection
+- [x] Relay purpose display in detail output
 - [ ] Dynamic relay discovery (NIP-66 relay monitors)
 
 ### General

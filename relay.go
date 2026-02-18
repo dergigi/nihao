@@ -424,6 +424,146 @@ func SelectRelays(candidates []RelayScore, maxCount int) []string {
 	return selected
 }
 
+// RelayMarker represents the NIP-65 read/write marker for a relay
+type RelayMarker string
+
+const (
+	RelayMarkerRead  RelayMarker = "read"
+	RelayMarkerWrite RelayMarker = "write"
+	RelayMarkerBoth  RelayMarker = "" // no marker = both
+)
+
+// MarkedRelay is a relay URL with its NIP-65 read/write marker
+type MarkedRelay struct {
+	URL    string      `json:"url"`
+	Marker RelayMarker `json:"marker,omitempty"` // "read", "write", or "" (both)
+}
+
+// DefaultMarkedRelays returns the default relay set with proper NIP-65 markers
+func DefaultMarkedRelays() []MarkedRelay {
+	return []MarkedRelay{
+		{URL: "wss://relay.damus.io", Marker: RelayMarkerBoth},
+		{URL: "wss://relay.primal.net", Marker: RelayMarkerBoth},
+		{URL: "wss://nos.lol", Marker: RelayMarkerBoth},
+		// purplepag.es is NOT in kind 10002 — it's a relay list aggregator, not a content relay
+		// We still publish TO it (outbox kinds only), but don't advertise it
+	}
+}
+
+// DefaultDMRelays returns good DM inbox relays for kind 10050
+var DefaultDMRelays = []string{
+	"wss://inbox.nostr.wine",
+	"wss://auth.nostr1.com",
+}
+
+// ClassifyDiscoveredRelay assigns a NIP-65 marker to a discovered relay
+func ClassifyDiscoveredRelay(url string) (MarkedRelay, bool) {
+	purpose := classifyRelay(url)
+	switch purpose {
+	case "outbox":
+		// purplepag.es etc should NOT be in kind 10002
+		return MarkedRelay{}, false
+	case "inbox":
+		return MarkedRelay{URL: url, Marker: RelayMarkerRead}, true
+	case "paid", "nwc", "search":
+		return MarkedRelay{}, false
+	}
+	// General relays are both read+write
+	return MarkedRelay{URL: url, Marker: RelayMarkerBoth}, true
+}
+
+// MarkedRelaysToTags converts marked relays to NIP-65 tags
+func MarkedRelaysToTags(relays []MarkedRelay) nostr.Tags {
+	var tags nostr.Tags
+	for _, r := range relays {
+		if r.Marker == RelayMarkerBoth {
+			tags = append(tags, nostr.Tag{"r", r.URL})
+		} else {
+			tags = append(tags, nostr.Tag{"r", r.URL, string(r.Marker)})
+		}
+	}
+	return tags
+}
+
+// MarkedRelayURLs extracts just the URLs from marked relays
+func MarkedRelayURLs(relays []MarkedRelay) []string {
+	var urls []string
+	for _, r := range relays {
+		urls = append(urls, r.URL)
+	}
+	return urls
+}
+
+// DiscoverDMRelays looks for kind 10050 events from well-connected npubs
+func DiscoverDMRelays(seedRelays []string) []string {
+	wellKnownHexKeys := []string{
+		"3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d", // fiatjaf
+		"32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245", // jb55
+		"e88a691e98d9987c964521dff60025f60700378a4879180dcbbb4a5027850411", // NVK
+		"04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9", // odell
+		"82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2", // jack
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	relaySet := make(map[string]int)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+
+	for _, hexKey := range wellKnownHexKeys {
+		wg.Add(1)
+		go func(hex string) {
+			defer wg.Done()
+			pk, err := nostr.PubKeyFromHex(hex)
+			if err != nil {
+				return
+			}
+			filter := nostr.Filter{
+				Authors: []nostr.PubKey{pk},
+				Kinds:   []nostr.Kind{10050},
+				Limit:   1,
+			}
+			for _, seedURL := range seedRelays {
+				relayCtx, relayCancel := context.WithTimeout(ctx, 5*time.Second)
+				relay, err := nostr.RelayConnect(relayCtx, seedURL, nostr.RelayOptions{})
+				if err != nil {
+					relayCancel()
+					continue
+				}
+				for evt := range relay.QueryEvents(filter) {
+					for _, tag := range evt.Tags {
+						if len(tag) >= 2 && tag[0] == "relay" {
+							url := normalizeRelayURL(tag[1])
+							if url != "" {
+								mu.Lock()
+								relaySet[url]++
+								mu.Unlock()
+							}
+						}
+					}
+				}
+				relay.Close()
+				relayCancel()
+				break
+			}
+		}(hexKey)
+	}
+	wg.Wait()
+
+	// Return relays used by 2+ npubs, or fall back to defaults
+	var discovered []string
+	for url, count := range relaySet {
+		if count >= 2 {
+			discovered = append(discovered, url)
+		}
+	}
+	if len(discovered) == 0 {
+		return DefaultDMRelays
+	}
+	return discovered
+}
+
 func normalizeRelayURL(url string) string {
 	url = strings.TrimSpace(url)
 	url = strings.TrimRight(url, "/")
