@@ -13,9 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Kind-aware publishing:** specialized relays (e.g. purplepag.es) only receive compatible event kinds — no more kind 1 rejections
 - **Relay scoring engine:** `relay.go` with NIP-11 fetching, WebSocket latency measurement, and 0.0–1.0 scoring
 - **Smart relay selection:** `SelectRelays` picks optimal set guaranteeing at least one outbox relay
+- **Relay classification:** detects paid (pyramid, premium), inbox, NWC, and search relays by URL patterns
+- Known paid/restricted relays filtered from selection automatically
 
 ### Fixed
 - purplepag.es no longer receives kind 1 events (was causing rejections)
+- Paid relays (premium.primal.net, pyramid) no longer selected during discovery
+- Inbox relays (inbox.relays.land) and NWC endpoints filtered from selection
 
 ## [0.7.0] - 2026-02-18
 
