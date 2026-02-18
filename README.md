@@ -1,8 +1,25 @@
 # nihao 👋
 
-**Nostr Identity Health-check Automation & Optimization**
+**Self-sovereign identity in one command.**
 
-A CLI tool to set up and verify Nostr identities. Agent-friendly by design.
+nihao gives any human or agent a complete Nostr identity — keypair, profile, relay
+list, lightning address, and a Cashu ecash wallet — in a single command. No accounts.
+No API keys. No KYC. No permission from anyone.
+
+One command. One binary. Unstoppable identity. Unstoppable money.
+
+## Why
+
+Every agent needs an identity. Every identity needs money. Today, both require
+permission — platform accounts, API keys, KYC gates. nihao removes the gatekeepers:
+
+- **Identity** via [Nostr](https://nostr.com) — censorship-resistant, self-sovereign, based on public-key cryptography
+- **Money** via [Cashu](https://cashu.space) + [Lightning](https://lightning.network) — bearer ecash, no bank account needed, works globally
+- **Discovery** via relay lists and NIP-05 — your identity is portable, not locked to any platform
+
+An agent that runs `nihao` walks away with a keypair, a profile on the relay
+network, a lightning address that can receive payments, and a wallet to hold
+and spend ecash. That's self-sovereignty in about 3 seconds.
 
 ## Install
 
@@ -10,33 +27,28 @@ A CLI tool to set up and verify Nostr identities. Agent-friendly by design.
 go install github.com/dergigi/nihao@latest
 ```
 
-## Usage
+## Quick Start
 
 ```bash
-# Full identity setup with sane defaults
-nihao
+# One command. Full identity. No questions asked.
+nihao --name "satoshi" --json
 
-# Non-interactive setup with options
-nihao --name "MyAgent" --about "I do things" --json
+# Bring your own key
+nihao --sec nsec1... --name "satoshi"
+echo $NSEC | nihao --stdin --name "satoshi"
 
-# Use an existing secret key
-nihao --sec nsec1...
-echo $NSEC | nihao --stdin --name "MyAgent"
-
-# Setup with custom mints
+# Custom mints for your wallet
 nihao --mint https://mint.minibits.cash/Bitcoin --mint https://mint.coinos.io
 
-# Store nsec securely via external command
-nihao --name "MyAgent" --nsec-cmd "pass insert -e nostr/myagent"
-nihao --nsec-cmd "age -r age1... -o ~/.nostr/nsec.age"
-nihao --nsec-cmd "secret-tool store --label='nostr nsec' service nostr account default"
+# Store your nsec securely via password manager
+nihao --name "satoshi" --nsec-cmd "pass insert -e nostr/satoshi"
 
-# Setup without wallet
+# Skip the wallet if you just need identity
 nihao --no-wallet
 
-# Check an existing identity
-nihao check <npub>
-nihao check <npub> --json
+# Audit any npub's identity health
+nihao check npub1...
+nihao check npub1... --json
 ```
 
 ## Default Relays
@@ -50,9 +62,9 @@ New identities are published to a curated set of reliable relays:
 
 Override with `--relays wss://my.relay,wss://other.relay`.
 
-## Features
+## What You Get
 
-### Setup (`nihao`)
+### Setup (`nihao`) — from zero to full identity
 
 - [x] Generate keypair (or use `--sec` / `--stdin`)
 - [x] Publish profile metadata (kind 0)
@@ -71,7 +83,7 @@ Override with `--relays wss://my.relay,wss://other.relay`.
 - [x] `--nsec-cmd` for secure key storage via external command
 - [ ] NIP-05 setup assistance
 
-### Check (`nihao check <npub>`)
+### Check (`nihao check <npub>`) — audit any identity
 
 - [x] Profile metadata (kind 0) with completeness breakdown
 - [x] Profile image health (404 detection, file size, Blossom hosting)
@@ -97,7 +109,7 @@ Override with `--relays wss://my.relay,wss://other.relay`.
 - [x] Non-interactive by default
 - [x] Meaningful exit codes
 - [ ] `nihao check` without args (read local key)
-- [ ] OpenClaw skill wrapper
+- [x] OpenClaw skill wrapper
 
 ## Key Management
 
@@ -173,14 +185,25 @@ vault kv get -field=nsec secret/nostr | nihao --stdin --name "NewName"
 age -d ~/keys/nostr.age | nihao --stdin --name "NewName"
 ```
 
-## Built with
+## The Stack
 
-- [go-nostr](https://pkg.go.dev/fiatjaf.com/nostr) — the library that powers [nak](https://github.com/fiatjaf/nak)
+- **[Nostr](https://nostr.com)** — the protocol. Censorship-resistant social identity based on secp256k1 keys and relays.
+- **[Cashu](https://cashu.space)** — Chaumian ecash on Bitcoin. Bearer tokens with blind signatures for privacy.
+- **[Lightning](https://lightning.network)** — instant Bitcoin payments. Every nihao identity gets a lightning address out of the box.
+- **[go-nostr](https://pkg.go.dev/fiatjaf.com/nostr)** — the Go library that powers [nak](https://github.com/fiatjaf/nak). nihao uses it directly as a dependency.
+
+## Philosophy
+
+**No gatekeepers.** Identity should not require permission. Money should not require a bank account. nihao exists because agents (and humans) deserve self-sovereignty by default.
+
+**Agent-first, human-friendly.** Every command works non-interactively with `--json` output and meaningful exit codes. But it's just as useful for a human setting up their first Nostr identity.
+
+**Single binary, zero dependencies.** `go install` and you're done. No Docker, no config files, no databases.
 
 ## Versioning
 
-This project follows [Semantic Versioning](https://semver.org/). See [CHANGELOG.md](CHANGELOG.md) for release history.
+[Semantic Versioning](https://semver.org/). See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 
-MIT
+MIT — free as in freedom.

@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-02-18
+
+### Changed
+- Complete README rewrite: leads with the "why" — self-sovereign identity and unstoppable money for agents
+- New sections: Why, Quick Start, The Stack, Philosophy
+- Updated SKILL.md description to match
+- Marked OpenClaw skill wrapper as complete
+
 ## [0.6.0] - 2026-02-17
 
 ### Added
