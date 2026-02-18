@@ -57,6 +57,14 @@ func runCheck(target string, jsonOutput bool, quiet bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
+	// Connect to relays once and reuse for all fetches
+	checkRelays := connectCheckRelays(ctx)
+	defer func() {
+		for _, cr := range checkRelays {
+			cr.relay.Close()
+		}
+	}()
+
 	result := CheckResult{
 		Npub:     npub,
 		Pubkey:   pk.Hex(),
@@ -64,7 +72,7 @@ func runCheck(target string, jsonOutput bool, quiet bool) {
 	}
 
 	// Fetch profile (kind 0)
-	_, profileEvt := fetchKind(ctx, pk, 0)
+	_, profileEvt := fetchKindFrom(ctx, checkRelays, pk, 0)
 	if profileEvt != nil {
 		var meta ProfileMetadata
 		json.Unmarshal([]byte(profileEvt.Content), &meta)
@@ -152,7 +160,7 @@ func runCheck(target string, jsonOutput bool, quiet bool) {
 	}
 
 	// Check 4: Relay list (kind 10002) with NIP-65 marker analysis
-	_, relayEvt := fetchKind(ctx, pk, 10002)
+	_, relayEvt := fetchKindFrom(ctx, checkRelays, pk, 10002)
 	if relayEvt != nil {
 		var relayURLs []string
 		hasMarkers := false
@@ -264,7 +272,7 @@ func runCheck(target string, jsonOutput bool, quiet bool) {
 	}
 
 	// Check 4b: DM relay list (kind 10050)
-	_, dmRelayEvt := fetchKind(ctx, pk, 10050)
+	_, dmRelayEvt := fetchKindFrom(ctx, checkRelays, pk, 10050)
 	if dmRelayEvt != nil {
 		var dmRelayURLs []string
 		for _, tag := range dmRelayEvt.Tags {
@@ -282,7 +290,7 @@ func runCheck(target string, jsonOutput bool, quiet bool) {
 	}
 
 	// Check 5: Follow list (kind 3)
-	_, followEvt := fetchKind(ctx, pk, 3)
+	_, followEvt := fetchKindFrom(ctx, checkRelays, pk, 3)
 	if followEvt != nil {
 		followCount := 0
 		for _, tag := range followEvt.Tags {
@@ -302,11 +310,11 @@ func runCheck(target string, jsonOutput bool, quiet bool) {
 
 	// Check 6: NIP-60 wallet (kind 17375 new, 37375 old)
 	walletKind := 0
-	_, walletEvt := fetchKind(ctx, pk, 17375)
+	_, walletEvt := fetchKindFrom(ctx, checkRelays, pk, 17375)
 	if walletEvt != nil {
 		walletKind = 17375
 	} else {
-		_, walletEvt = fetchKind(ctx, pk, 37375) // backwards compat
+		_, walletEvt = fetchKindFrom(ctx, checkRelays, pk, 37375) // backwards compat
 		if walletEvt != nil {
 			walletKind = 37375
 		}
@@ -321,7 +329,7 @@ func runCheck(target string, jsonOutput bool, quiet bool) {
 
 		// Check for nutzap info (kind 10019)
 		walletInfo := &WalletCheckInfo{WalletKind: walletKind}
-		_, nutzapEvt := fetchKind(ctx, pk, 10019)
+		_, nutzapEvt := fetchKindFrom(ctx, checkRelays, pk, 10019)
 		if nutzapEvt != nil {
 			walletInfo.HasNutzap = true
 
@@ -391,7 +399,48 @@ func (r *CheckResult) addCheck(name, status, detail string) {
 	})
 }
 
-func fetchKind(ctx context.Context, pk nostr.PubKey, kind int) (string, *nostr.Event) {
+// checkRelay holds a persistent relay connection for the check command.
+type checkRelay struct {
+	url   string
+	relay *nostr.Relay
+}
+
+// connectCheckRelays opens persistent connections to all default relays for reuse
+// across multiple fetchKindFrom calls. This avoids opening 4+ WebSocket connections
+// per kind (up to 28+ total) and instead maintains just one connection per relay.
+func connectCheckRelays(ctx context.Context) []checkRelay {
+	type result struct {
+		url   string
+		relay *nostr.Relay
+	}
+
+	ch := make(chan result, len(defaultRelays))
+	for _, u := range defaultRelays {
+		go func(u string) {
+			relayCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			relay, err := nostr.RelayConnect(relayCtx, u, nostr.RelayOptions{})
+			if err != nil {
+				ch <- result{u, nil}
+				return
+			}
+			ch <- result{u, relay}
+		}(u)
+	}
+
+	var relays []checkRelay
+	for range defaultRelays {
+		r := <-ch
+		if r.relay != nil {
+			relays = append(relays, checkRelay{url: r.url, relay: r.relay})
+		}
+	}
+	return relays
+}
+
+// fetchKindFrom queries already-connected relays for a specific kind.
+// Returns the first event found from any relay.
+func fetchKindFrom(ctx context.Context, relays []checkRelay, pk nostr.PubKey, kind int) (string, *nostr.Event) {
 	filter := nostr.Filter{
 		Authors: []nostr.PubKey{pk},
 		Kinds:   []nostr.Kind{nostr.Kind(kind)},
@@ -403,30 +452,20 @@ func fetchKind(ctx context.Context, pk nostr.PubKey, kind int) (string, *nostr.E
 		evt *nostr.Event
 	}
 
-	results := make(chan fetchResult, len(defaultRelays))
-	fetchCtx, fetchCancel := context.WithCancel(ctx)
-	defer fetchCancel()
+	ch := make(chan fetchResult, len(relays))
 
-	for _, u := range defaultRelays {
-		go func(u string) {
-			relayCtx, cancel := context.WithTimeout(fetchCtx, 5*time.Second)
-			defer cancel()
-			relay, err := nostr.RelayConnect(relayCtx, u, nostr.RelayOptions{})
-			if err != nil {
-				results <- fetchResult{u, nil}
+	for _, cr := range relays {
+		go func(cr checkRelay) {
+			for evt := range cr.relay.QueryEvents(filter) {
+				ch <- fetchResult{cr.url, &evt}
 				return
 			}
-			defer relay.Close()
-			for evt := range relay.QueryEvents(filter) {
-				results <- fetchResult{u, &evt}
-				return
-			}
-			results <- fetchResult{u, nil}
-		}(u)
+			ch <- fetchResult{cr.url, nil}
+		}(cr)
 	}
 
-	for range defaultRelays {
-		r := <-results
+	for range relays {
+		r := <-ch
 		if r.evt != nil {
 			return r.url, r.evt
 		}
