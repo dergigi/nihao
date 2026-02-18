@@ -19,7 +19,7 @@ type WalletSetupResult struct {
 
 // setupWallet creates a NIP-60 wallet and publishes kind 17375 + kind 10019.
 // Returns the wallet setup result or an error.
-func setupWallet(ctx context.Context, sk nostr.SecretKey, relays []string, mintInfos []MintInfo) (*WalletSetupResult, error) {
+func setupWallet(ctx context.Context, sk nostr.SecretKey, relays []string, mintInfos []MintInfo, pool ...*RelayPool) (*WalletSetupResult, error) {
 	kr := keyer.NewPlainKeySigner(sk)
 
 	// Step 1: Generate a separate P2PK private key for the wallet
@@ -68,7 +68,11 @@ func setupWallet(ctx context.Context, sk nostr.SecretKey, relays []string, mintI
 	}
 
 	fmt.Println("💰 Publishing wallet (kind 17375)...")
-	publishToRelays(walletEvt, relays)
+	if len(pool) > 0 && pool[0] != nil {
+		pool[0].Publish(walletEvt)
+	} else {
+		publishToRelays(walletEvt, relays)
+	}
 	fmt.Println()
 
 	// Step 3: Build and publish nutzap info (kind 10019)
@@ -98,7 +102,11 @@ func setupWallet(ctx context.Context, sk nostr.SecretKey, relays []string, mintI
 	}
 
 	fmt.Println("⚡ Publishing nutzap info (kind 10019)...")
-	publishToRelays(nutzapEvt, relays)
+	if len(pool) > 0 && pool[0] != nil {
+		pool[0].Publish(nutzapEvt)
+	} else {
+		publishToRelays(nutzapEvt, relays)
+	}
 	fmt.Println()
 
 	return &WalletSetupResult{

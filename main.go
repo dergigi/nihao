@@ -242,9 +242,18 @@ func runSetup(args []string) {
 		markedRelays = DefaultMarkedRelays()
 	}
 
+	// Connect to relays once, reuse for all publishes
+	pool := NewRelayPool(relays, opts.quiet)
+	defer pool.Close()
+
+	// Delay between publishes to avoid rate limiting (especially on damus)
+	publishDelay := 300 * time.Millisecond
+
 	logln("👤 Publishing profile metadata (kind 0)...")
-	publishToRelays(evt, relays, opts.quiet)
+	pool.Publish(evt)
 	logln()
+
+	time.Sleep(publishDelay)
 
 	// Step 3: Publish relay list (kind 10002) with NIP-65 read/write markers
 	relayEvt := nostr.Event{
@@ -263,8 +272,10 @@ func runSetup(args []string) {
 			logln(fmt.Sprintf("   %s (%s)", mr.URL, mr.Marker))
 		}
 	}
-	publishToRelays(relayEvt, relays, opts.quiet)
+	pool.Publish(relayEvt)
 	logln()
+
+	time.Sleep(publishDelay)
 
 	// Step 4: Publish empty follow list (kind 3)
 	followEvt := nostr.Event{
@@ -276,8 +287,10 @@ func runSetup(args []string) {
 	followEvt.Sign(sk)
 
 	logln("👥 Publishing follow list (kind 3)...")
-	publishToRelays(followEvt, relays, opts.quiet)
+	pool.Publish(followEvt)
 	logln()
+
+	time.Sleep(publishDelay)
 
 	// Step 4b: Publish DM relay list (kind 10050) per NIP-17
 	if !opts.noDMRelays {
@@ -306,8 +319,10 @@ func runSetup(args []string) {
 		dmEvt.Sign(sk)
 
 		logln("📬 Publishing DM relay list (kind 10050)...")
-		publishToRelays(dmEvt, relays, opts.quiet)
+		pool.Publish(dmEvt)
 		logln()
+
+		time.Sleep(publishDelay)
 	}
 
 	// Step 5: Set up NIP-60 wallet
@@ -326,13 +341,15 @@ func runSetup(args []string) {
 			}
 			logln()
 
-			walletResult, err = setupWallet(walletCtx, sk, relays, mintInfos)
+			walletResult, err = setupWallet(walletCtx, sk, relays, mintInfos, pool)
 			if err != nil {
 				logln(fmt.Sprintf("   ⚠️  Wallet setup failed: %s", err))
 			}
 		}
 		logln()
 	}
+
+	time.Sleep(publishDelay)
 
 	// Step 6: Say hello (kind 1)
 	greetings := []string{
@@ -403,7 +420,7 @@ func runSetup(args []string) {
 	helloEvt.Sign(sk)
 
 	logln("💬 Posting first note (kind 1)...")
-	publishToRelays(helloEvt, relays, opts.quiet)
+	pool.Publish(helloEvt)
 	logln()
 
 	// Summary
@@ -444,25 +461,28 @@ type publishResult struct {
 	err     string
 }
 
-func publishToRelays(evt nostr.Event, relays []string, quiet ...bool) {
-	silent := len(quiet) > 0 && quiet[0]
+// RelayPool manages persistent connections to a set of relays.
+// Connect once, publish many events, close when done.
+type RelayPool struct {
+	relays map[string]*nostr.Relay
+	urls   []string
+	quiet  bool
+	mu     sync.Mutex
+}
+
+// NewRelayPool connects to all relays in parallel and returns a pool.
+func NewRelayPool(urls []string, quiet bool) *RelayPool {
+	pool := &RelayPool{
+		relays: make(map[string]*nostr.Relay),
+		urls:   urls,
+		quiet:  quiet,
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
 
-	// Filter relays by event kind (e.g. don't send kind 1 to purplepag.es)
-	var targetRelays []string
-	for _, url := range relays {
-		if ShouldPublishTo(url, evt.Kind) {
-			targetRelays = append(targetRelays, url)
-		} else if !silent {
-			fmt.Printf("   ⊘ %s (skipped, %s only)\n", url, specializedRelays[url])
-		}
-	}
-
-	results := make(chan publishResult, len(targetRelays))
 	var wg sync.WaitGroup
-
-	for _, url := range targetRelays {
+	for _, url := range urls {
 		wg.Add(1)
 		go func(url string) {
 			defer wg.Done()
@@ -471,34 +491,103 @@ func publishToRelays(evt nostr.Event, relays []string, quiet ...bool) {
 
 			relay, err := nostr.RelayConnect(relayCtx, url, nostr.RelayOptions{})
 			if err != nil {
-				results <- publishResult{url, false, "connection failed"}
+				if !quiet {
+					fmt.Printf("   ⚠ %s (connect failed)\n", url)
+				}
 				return
 			}
-			defer relay.Close()
+			pool.mu.Lock()
+			pool.relays[url] = relay
+			pool.mu.Unlock()
+		}(url)
+	}
+	wg.Wait()
+	return pool
+}
 
-			err = relay.Publish(relayCtx, evt)
+// Publish sends an event to all connected relays, filtering by kind.
+func (p *RelayPool) Publish(evt nostr.Event) {
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+
+	type result struct {
+		url     string
+		success bool
+		err     string
+		skipped bool
+		reason  string
+	}
+
+	var targets []string
+	var results []result
+
+	for _, url := range p.urls {
+		if !ShouldPublishTo(url, evt.Kind) {
+			purpose := classifyRelay(url)
+			results = append(results, result{url, false, "", true, purpose})
+			continue
+		}
+		targets = append(targets, url)
+	}
+
+	ch := make(chan result, len(targets))
+	var wg sync.WaitGroup
+
+	for _, url := range targets {
+		wg.Add(1)
+		go func(url string) {
+			defer wg.Done()
+			p.mu.Lock()
+			relay, ok := p.relays[url]
+			p.mu.Unlock()
+			if !ok {
+				ch <- result{url, false, "not connected", false, ""}
+				return
+			}
+			err := relay.Publish(ctx, evt)
 			if err != nil {
-				results <- publishResult{url, false, err.Error()}
+				ch <- result{url, false, err.Error(), false, ""}
 			} else {
-				results <- publishResult{url, true, ""}
+				ch <- result{url, true, "", false, ""}
 			}
 		}(url)
 	}
 
 	go func() {
 		wg.Wait()
-		close(results)
+		close(ch)
 	}()
 
-	for r := range results {
-		if !silent {
-			if r.success {
+	for r := range ch {
+		results = append(results, r)
+	}
+
+	if !p.quiet {
+		for _, r := range results {
+			if r.skipped {
+				fmt.Printf("   ⊘ %s (skipped, %s only)\n", r.url, r.reason)
+			} else if r.success {
 				fmt.Printf("   ✓ %s\n", r.url)
 			} else {
 				fmt.Printf("   ✗ %s (%s)\n", r.url, r.err)
 			}
 		}
 	}
+}
+
+// Close disconnects all relays in the pool.
+func (p *RelayPool) Close() {
+	for _, relay := range p.relays {
+		relay.Close()
+	}
+}
+
+// publishToRelays is a convenience wrapper for one-off publishes (used in wallet setup etc).
+func publishToRelays(evt nostr.Event, relays []string, quiet ...bool) {
+	silent := len(quiet) > 0 && quiet[0]
+	pool := NewRelayPool(relays, silent)
+	defer pool.Close()
+	pool.Publish(evt)
 }
 
 func parseSecretKey(input string) (nostr.SecretKey, error) {
