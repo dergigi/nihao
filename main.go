@@ -62,6 +62,18 @@ func main() {
 			}
 			runCheck(target, jsonOutput, quiet)
 			return
+		case "backup":
+			target := ""
+			quiet := false
+			for _, a := range args[1:] {
+				if a == "--quiet" || a == "-q" {
+					quiet = true
+				} else if !strings.HasPrefix(a, "-") {
+					target = a
+				}
+			}
+			runBackup(target, quiet)
+			return
 		case "version", "--version":
 			fmt.Printf("nihao %s\n", version)
 			return
@@ -81,6 +93,7 @@ func printUsage() {
 USAGE:
   nihao                     Set up a new Nostr identity with sane defaults
   nihao check <npub|nip05>  Check the health of a Nostr identity
+  nihao backup <npub|nip05> Export identity events as JSON
   nihao version             Print version
 
 SETUP FLAGS:
@@ -103,6 +116,9 @@ SETUP FLAGS:
 CHECK FLAGS:
   --json                    Output result as JSON
   --quiet, -q               Suppress non-JSON, non-error output
+
+BACKUP FLAGS:
+  --quiet, -q               Suppress progress output (JSON always goes to stdout)
 
 EXIT CODES:
   0                         Success (check: all checks pass)

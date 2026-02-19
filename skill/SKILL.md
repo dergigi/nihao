@@ -162,6 +162,21 @@ Checks and scores (0–8):
 | `0` | All checks pass (score = max) |
 | `1` | One or more checks fail |
 
+## Backup — Export Identity Events
+
+```bash
+nihao backup <npub|nip05> > identity.json
+nihao backup <npub|nip05> --quiet > identity.json
+```
+
+Exports all identity-related events as JSON: kind 0 (profile), kind 3 (follows), kind 10002 (relay list), kind 10050 (DM relays), kind 10019 (nutzap info), kind 17375/37375 (wallet). JSON goes to stdout, progress to stderr. Use for snapshots, migration, or archival.
+
+### Backup Flags
+
+| Flag | Purpose |
+|---|---|
+| `--quiet, -q` | Suppress progress output (JSON always goes to stdout) |
+
 ## JSON Output
 
 Both setup and check support `--json` for structured, parseable output.

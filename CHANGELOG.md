@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.11.0] - 2026-02-19
+
+### Added
+- **`nihao backup <npub|nip05>`**: Export all identity events as JSON — profile (kind 0), follow list (kind 3), relay list (kind 10002), DM relays (kind 10050), nutzap info (kind 10019), wallet (kind 17375/37375). JSON goes to stdout, progress to stderr. Pipe to file for a full identity snapshot.
+- **`--quiet` flag for backup**: Suppresses progress output, JSON always goes to stdout
+
+### Fixed
+- **fetchKindFrom context cancellation**: Previously could hang forever if a relay didn't respond; now respects context timeout and returns best result so far
+
 ## [0.10.1] - 2026-02-19
 
 ### Changed

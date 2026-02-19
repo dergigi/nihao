@@ -8,5 +8,5 @@
 
 ## Ideas
 - [ ] `nihao update` — update an existing identity (change name, picture, etc.)
-- [ ] `nihao backup` — export full identity state (profile, relay list, follows, wallet)
+- [x] `nihao backup` — export full identity state (profile, relay list, follows, wallet)
 - [ ] `nihao nuke` — publish deletion events for all identity-related kinds

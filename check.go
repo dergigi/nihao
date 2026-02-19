@@ -467,13 +467,19 @@ func fetchKindFrom(ctx context.Context, relays []checkRelay, pk nostr.PubKey, ki
 
 	var bestURL string
 	var bestEvt *nostr.Event
-	for range relays {
-		r := <-ch
-		if r.evt != nil {
-			if bestEvt == nil || r.evt.CreatedAt > bestEvt.CreatedAt {
-				bestURL = r.url
-				bestEvt = r.evt
+	remaining := len(relays)
+	for remaining > 0 {
+		select {
+		case r := <-ch:
+			remaining--
+			if r.evt != nil {
+				if bestEvt == nil || r.evt.CreatedAt > bestEvt.CreatedAt {
+					bestURL = r.url
+					bestEvt = r.evt
+				}
 			}
+		case <-ctx.Done():
+			return bestURL, bestEvt
 		}
 	}
 	return bestURL, bestEvt
