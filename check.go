@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-
 	"fiatjaf.com/nostr"
 	"fiatjaf.com/nostr/nip19"
 )
@@ -59,6 +58,9 @@ func runCheck(target string, jsonOutput bool, quiet bool) {
 
 	// Connect to relays once and reuse for all fetches
 	checkRelays := connectCheckRelays(ctx)
+	if len(checkRelays) == 0 {
+		fatal("could not connect to any relay")
+	}
 	defer func() {
 		for _, cr := range checkRelays {
 			cr.relay.Close()
@@ -163,7 +165,6 @@ func runCheck(target string, jsonOutput bool, quiet bool) {
 	_, relayEvt := fetchKindFrom(ctx, checkRelays, pk, 10002)
 	if relayEvt != nil {
 		var relayURLs []string
-		hasMarkers := false
 		allBare := true
 		readCount := 0
 		writeCount := 0
@@ -172,7 +173,6 @@ func runCheck(target string, jsonOutput bool, quiet bool) {
 			if len(tag) >= 2 && tag[0] == "r" {
 				relayURLs = append(relayURLs, tag[1])
 				if len(tag) >= 3 {
-					hasMarkers = true
 					allBare = false
 					switch tag[2] {
 					case "read":
@@ -185,7 +185,6 @@ func runCheck(target string, jsonOutput bool, quiet bool) {
 				}
 			}
 		}
-		_ = hasMarkers
 		relayCount := len(relayURLs)
 		if relayCount >= 2 {
 			result.addCheck("relay_list", "pass", fmt.Sprintf("%d relays", relayCount))

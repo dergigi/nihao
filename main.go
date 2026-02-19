@@ -455,12 +455,6 @@ func runSetup(args []string) {
 	}
 }
 
-type publishResult struct {
-	url     string
-	success bool
-	err     string
-}
-
 // RelayPool manages persistent connections to a set of relays.
 // Connect once, publish many events, close when done.
 type RelayPool struct {
