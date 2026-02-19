@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -16,7 +17,15 @@ import (
 	"fiatjaf.com/nostr/nip19"
 )
 
-var version = "dev"
+// version is set at build time via ldflags or read from Go module info.
+// When installed via `go install github.com/dergigi/nihao@v0.10.1`,
+// Go embeds the version in the binary's build info automatically.
+var version = func() string {
+	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return info.Main.Version
+	}
+	return "dev"
+}()
 
 // Default relays for new identities — curated for reliability and coverage.
 // General-purpose relays (read + write):

@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.10.1] - 2026-02-19
+
+### Changed
+- **Version reporting**: `nihao version` now reads the version from Go module build info, so `go install github.com/dergigi/nihao@vX.Y.Z` automatically reports the correct version instead of "dev"
+- **CHANGELOG**: Added missing v0.10.0 entry
+
+## [0.10.0] - 2026-02-19
+
+### Added
+- **NIP-05 identifiers in check**: `nihao check dergigi.com` or `nihao check gigi@example.com` resolves NIP-05 to npub before checking
+- **Unit test suite**: 10 tests covering all pure functions (isRootNIP05, formatSize, classifyRelay, normalizeRelayURL, ShouldPublishTo, parsePubkey, parseSetupFlags, MarkedRelaysToTags, imageHostingTier, addCheck)
+- **SKILL.md rewrite**: Full capabilities disclosure, install flow, flag reference, JSON examples for ClawHub
+
+### Fixed
+- **fetchKindFrom picks latest event**: Previously returned whichever relay responded first; now collects from all relays and picks highest `created_at` (correct per NIP-01 for replaceable events)
+- **--quiet flag respected everywhere**: `setupWallet()` and `selectMints()` no longer print to stdout when `--quiet` is set
+- **Dead code removal**: Removed unused variables and structs, added guard for zero connected check relays
+
+### Changed
+- **Check command connection pooling**: Reuses persistent relay connections across all kind fetches (was 28 connections, now 4)
+
 ## [0.9.0] - 2026-02-18
 
 ### Added
@@ -20,24 +41,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **`nihao check` relay marker analysis**: Warns if all relays have bare tags (no read/write markers)
 - **`nihao check` DM relay detection**: Checks for kind 10050, warns if missing
 - **Relay purpose display**: Per-relay detail output now shows read/write/read+write purpose
-
-## [0.9.0] - 2026-02-18
-
-### Added
-- NIP-65 relay markers: kind 10002 now uses proper read/write tags
-- Kind 10050 DM inbox relay list: published during setup per NIP-17
-- `--dm-relays` and `--no-dm-relays` flags
-- DM relay discovery from well-connected npubs
-- `nihao check` audits relay markers (warns if all bare) and DM relays (warns if missing)
-- Per-relay purpose display in check output (read, write, read+write)
-
-### Changed
-- **Connection pooling:** setup connects to relays once and reuses for all publishes (was 7+ separate connections)
-- **Rate limiting:** 300ms delay between publishes to avoid damus rate-limiting on fresh npubs
-- **Relay config cleanup:** consolidated all hardcoded relay maps into clear config blocks at top of relay.go
-- **Scoring fairness:** removed reliability bonus — scores based purely on observed metrics (latency, NIP-11, reachability)
-- `wellConnectedNpubs` extracted as shared constant (was duplicated)
-- `classifyRelay()` simplified to single lookup path
 
 ## [0.8.0] - 2026-02-18
 
