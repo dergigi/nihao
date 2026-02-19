@@ -71,7 +71,7 @@ func printUsage() {
 
 USAGE:
   nihao                     Set up a new Nostr identity with sane defaults
-  nihao check [npub]        Check the health of a Nostr identity
+  nihao check <npub|nip05>  Check the health of a Nostr identity
   nihao version             Print version
 
 SETUP FLAGS:

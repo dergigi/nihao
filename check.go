@@ -43,9 +43,9 @@ func runCheck(target string, jsonOutput bool, quiet bool) {
 		fatal("usage: nihao check <npub|hex>")
 	}
 
-	pk, err := parsePubkey(target)
+	pk, err := resolveTarget(target, quiet)
 	if err != nil {
-		fatal("invalid pubkey: %s", err)
+		fatal("%s", err)
 	}
 
 	npub := nip19.EncodeNpub(pk)
@@ -536,6 +536,74 @@ func verifyLUD16(ctx context.Context, lud16 string) bool {
 	}
 
 	return result.Callback != ""
+}
+
+// resolveTarget accepts an npub, hex pubkey, or NIP-05 identifier and returns a pubkey.
+// NIP-05 identifiers contain "@" or a "." without "npub1" prefix.
+func resolveTarget(input string, quiet bool) (nostr.PubKey, error) {
+	// Try npub/hex first
+	if strings.HasPrefix(input, "npub1") || !strings.Contains(input, ".") {
+		return parsePubkey(input)
+	}
+
+	// Looks like a NIP-05 identifier (user@domain or bare domain)
+	if !quiet {
+		fmt.Printf("🔍 Resolving NIP-05: %s\n", input)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	pk, err := resolveNIP05(ctx, input)
+	if err != nil {
+		return nostr.PubKey{}, fmt.Errorf("NIP-05 resolution failed for %q: %w", input, err)
+	}
+
+	if !quiet {
+		fmt.Printf("   → %s\n\n", nip19.EncodeNpub(pk))
+	}
+	return pk, nil
+}
+
+// resolveNIP05 resolves a NIP-05 identifier to a pubkey.
+func resolveNIP05(ctx context.Context, identifier string) (nostr.PubKey, error) {
+	var name, domain string
+	if strings.Contains(identifier, "@") {
+		parts := strings.SplitN(identifier, "@", 2)
+		name, domain = parts[0], parts[1]
+	} else {
+		name, domain = "_", identifier
+	}
+
+	reqURL := fmt.Sprintf("https://%s/.well-known/nostr.json?name=%s", domain, name)
+	req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
+	if err != nil {
+		return nostr.PubKey{}, err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nostr.PubKey{}, fmt.Errorf("HTTP request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nostr.PubKey{}, fmt.Errorf("HTTP %d from %s", resp.StatusCode, domain)
+	}
+
+	var result struct {
+		Names map[string]string `json:"names"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nostr.PubKey{}, fmt.Errorf("invalid JSON response: %w", err)
+	}
+
+	hex, ok := result.Names[name]
+	if !ok {
+		return nostr.PubKey{}, fmt.Errorf("name %q not found at %s", name, domain)
+	}
+
+	return nostr.PubKeyFromHex(hex)
 }
 
 func parsePubkey(input string) (nostr.PubKey, error) {
