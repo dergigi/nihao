@@ -51,28 +51,38 @@ func main() {
 			target := ""
 			jsonOutput := false
 			quiet := false
-			for _, a := range args[1:] {
+			var relays []string
+			for i := 1; i < len(args); i++ {
+				a := args[i]
 				if a == "--json" {
 					jsonOutput = true
 				} else if a == "--quiet" || a == "-q" {
 					quiet = true
+				} else if a == "--relays" && i+1 < len(args) {
+					i++
+					relays = strings.Split(args[i], ",")
 				} else if !strings.HasPrefix(a, "-") {
 					target = a
 				}
 			}
-			runCheck(target, jsonOutput, quiet)
+			runCheck(target, jsonOutput, quiet, relays)
 			return
 		case "backup":
 			target := ""
 			quiet := false
-			for _, a := range args[1:] {
+			var relays []string
+			for i := 1; i < len(args); i++ {
+				a := args[i]
 				if a == "--quiet" || a == "-q" {
 					quiet = true
+				} else if a == "--relays" && i+1 < len(args) {
+					i++
+					relays = strings.Split(args[i], ",")
 				} else if !strings.HasPrefix(a, "-") {
 					target = a
 				}
 			}
-			runBackup(target, quiet)
+			runBackup(target, quiet, relays)
 			return
 		case "version", "--version":
 			fmt.Printf("nihao %s\n", version)
@@ -116,9 +126,11 @@ SETUP FLAGS:
 CHECK FLAGS:
   --json                    Output result as JSON
   --quiet, -q               Suppress non-JSON, non-error output
+  --relays <r1,r2,...>      Query these relays instead of defaults
 
 BACKUP FLAGS:
   --quiet, -q               Suppress progress output (JSON always goes to stdout)
+  --relays <r1,r2,...>      Query these relays instead of defaults
 
 EXIT CODES:
   0                         Success (check: all checks pass)

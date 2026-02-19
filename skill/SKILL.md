@@ -154,6 +154,7 @@ Checks and scores (0–8):
 |---|---|
 | `--json` | Structured JSON output |
 | `--quiet, -q` | Suppress non-JSON output |
+| `--relays <r1,r2,...>` | Query these relays instead of defaults |
 
 ### Exit Codes
 
@@ -176,6 +177,7 @@ Exports all identity-related events as JSON: kind 0 (profile), kind 3 (follows),
 | Flag | Purpose |
 |---|---|
 | `--quiet, -q` | Suppress progress output (JSON always goes to stdout) |
+| `--relays <r1,r2,...>` | Query these relays instead of defaults |
 
 ## JSON Output
 

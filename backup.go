@@ -47,7 +47,7 @@ var kindLabels = map[int]string{
 // backupKinds is the ordered list of kinds to back up.
 var backupKinds = []int{0, 3, 10002, 10050, 10019, 17375, 37375}
 
-func runBackup(target string, quiet bool) {
+func runBackup(target string, quiet bool, relays []string) {
 	if target == "" {
 		fatal("usage: nihao backup <npub|nip05>")
 	}
@@ -66,7 +66,7 @@ func runBackup(target string, quiet bool) {
 	defer cancel()
 
 	// Connect to relays
-	checkRelays := connectCheckRelays(ctx)
+	checkRelays := connectCheckRelays(ctx, relays)
 	if len(checkRelays) == 0 {
 		fatal("could not connect to any relay")
 	}

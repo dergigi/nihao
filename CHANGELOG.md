@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.11.1] - 2026-02-19
+
+### Added
+- **`--relays` flag for check and backup**: `nihao check npub1... --relays wss://relay1,wss://relay2` queries custom relays instead of defaults. Same for `nihao backup`. Useful when the default relays don't have the user's data.
+
 ## [0.11.0] - 2026-02-19
 
 ### Added

@@ -38,7 +38,7 @@ type CheckItem struct {
 	Detail string `json:"detail,omitempty"`
 }
 
-func runCheck(target string, jsonOutput bool, quiet bool) {
+func runCheck(target string, jsonOutput bool, quiet bool, relays []string) {
 	if target == "" {
 		fatal("usage: nihao check <npub|hex>")
 	}
@@ -57,7 +57,7 @@ func runCheck(target string, jsonOutput bool, quiet bool) {
 	defer cancel()
 
 	// Connect to relays once and reuse for all fetches
-	checkRelays := connectCheckRelays(ctx)
+	checkRelays := connectCheckRelays(ctx, relays)
 	if len(checkRelays) == 0 {
 		fatal("could not connect to any relay")
 	}
@@ -407,14 +407,19 @@ type checkRelay struct {
 // connectCheckRelays opens persistent connections to all default relays for reuse
 // across multiple fetchKindFrom calls. This avoids opening 4+ WebSocket connections
 // per kind (up to 28+ total) and instead maintains just one connection per relay.
-func connectCheckRelays(ctx context.Context) []checkRelay {
+func connectCheckRelays(ctx context.Context, relayURLs ...[]string) []checkRelay {
+	urls := defaultRelays
+	if len(relayURLs) > 0 && len(relayURLs[0]) > 0 {
+		urls = relayURLs[0]
+	}
+
 	type result struct {
 		url   string
 		relay *nostr.Relay
 	}
 
-	ch := make(chan result, len(defaultRelays))
-	for _, u := range defaultRelays {
+	ch := make(chan result, len(urls))
+	for _, u := range urls {
 		go func(u string) {
 			relayCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
@@ -428,7 +433,7 @@ func connectCheckRelays(ctx context.Context) []checkRelay {
 	}
 
 	var relays []checkRelay
-	for range defaultRelays {
+	for range urls {
 		r := <-ch
 		if r.relay != nil {
 			relays = append(relays, checkRelay{url: r.url, relay: r.relay})
