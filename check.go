@@ -421,8 +421,7 @@ func connectCheckRelays(ctx context.Context, relayURLs ...[]string) []checkRelay
 	ch := make(chan result, len(urls))
 	for _, u := range urls {
 		go func(u string) {
-			relayCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
+			relayCtx, _ := context.WithTimeout(ctx, 5*time.Second)
 			relay, err := nostr.RelayConnect(relayCtx, u, nostr.RelayOptions{})
 			if err != nil {
 				ch <- result{u, nil}
