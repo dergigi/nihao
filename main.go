@@ -332,7 +332,7 @@ func runSetup(args []string) {
 		defer walletCancel()
 
 		logln("🔍 Validating mints...")
-		mintInfos, err := selectMints(walletCtx, opts.mints)
+		mintInfos, err := selectMints(walletCtx, opts.mints, opts.quiet)
 		if err != nil {
 			logln(fmt.Sprintf("   ⚠️  Wallet setup skipped: %s", err))
 		} else {
@@ -341,7 +341,7 @@ func runSetup(args []string) {
 			}
 			logln()
 
-			walletResult, err = setupWallet(walletCtx, sk, relays, mintInfos, pool)
+			walletResult, err = setupWallet(walletCtx, sk, relays, mintInfos, opts.quiet, pool)
 			if err != nil {
 				logln(fmt.Sprintf("   ⚠️  Wallet setup failed: %s", err))
 			}

@@ -131,7 +131,7 @@ func validateMints(ctx context.Context, urls []string) (valid []MintInfo, invali
 // selectMints returns the mint URLs to use for wallet setup.
 // If user provided --mint flags, use those. Otherwise use curated defaults.
 // All mints are validated before use.
-func selectMints(ctx context.Context, userMints []string) ([]MintInfo, error) {
+func selectMints(ctx context.Context, userMints []string, quiet bool) ([]MintInfo, error) {
 	candidates := defaultMints
 	if len(userMints) > 0 {
 		candidates = userMints
@@ -140,8 +140,10 @@ func selectMints(ctx context.Context, userMints []string) ([]MintInfo, error) {
 	valid, invalid := validateMints(ctx, candidates)
 
 	// Log invalid mints
-	for _, m := range invalid {
-		fmt.Printf("   ✗ %s (%s)\n", m.URL, m.Error)
+	if !quiet {
+		for _, m := range invalid {
+			fmt.Printf("   ✗ %s (%s)\n", m.URL, m.Error)
+		}
 	}
 
 	if len(valid) == 0 {

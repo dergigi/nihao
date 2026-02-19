@@ -19,7 +19,8 @@ type WalletSetupResult struct {
 
 // setupWallet creates a NIP-60 wallet and publishes kind 17375 + kind 10019.
 // Returns the wallet setup result or an error.
-func setupWallet(ctx context.Context, sk nostr.SecretKey, relays []string, mintInfos []MintInfo, pool ...*RelayPool) (*WalletSetupResult, error) {
+// The quiet parameter suppresses non-error output to avoid polluting --json.
+func setupWallet(ctx context.Context, sk nostr.SecretKey, relays []string, mintInfos []MintInfo, quiet bool, pool ...*RelayPool) (*WalletSetupResult, error) {
 	kr := keyer.NewPlainKeySigner(sk)
 
 	// Step 1: Generate a separate P2PK private key for the wallet
@@ -67,13 +68,17 @@ func setupWallet(ctx context.Context, sk nostr.SecretKey, relays []string, mintI
 		return nil, fmt.Errorf("failed to sign wallet event: %w", err)
 	}
 
-	fmt.Println("💰 Publishing wallet (kind 17375)...")
+	if !quiet {
+		fmt.Println("💰 Publishing wallet (kind 17375)...")
+	}
 	if len(pool) > 0 && pool[0] != nil {
 		pool[0].Publish(walletEvt)
 	} else {
-		publishToRelays(walletEvt, relays)
+		publishToRelays(walletEvt, relays, quiet)
 	}
-	fmt.Println()
+	if !quiet {
+		fmt.Println()
+	}
 
 	// Step 3: Build and publish nutzap info (kind 10019)
 	nutzapTags := nostr.Tags{}
@@ -101,13 +106,17 @@ func setupWallet(ctx context.Context, sk nostr.SecretKey, relays []string, mintI
 		return nil, fmt.Errorf("failed to sign nutzap info event: %w", err)
 	}
 
-	fmt.Println("⚡ Publishing nutzap info (kind 10019)...")
+	if !quiet {
+		fmt.Println("⚡ Publishing nutzap info (kind 10019)...")
+	}
 	if len(pool) > 0 && pool[0] != nil {
 		pool[0].Publish(nutzapEvt)
 	} else {
-		publishToRelays(nutzapEvt, relays)
+		publishToRelays(nutzapEvt, relays, quiet)
 	}
-	fmt.Println()
+	if !quiet {
+		fmt.Println()
+	}
 
 	return &WalletSetupResult{
 		P2PKPubkey: p2pkPubkey,
