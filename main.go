@@ -509,18 +509,18 @@ func NewRelayPool(urls []string, quiet bool) *RelayPool {
 		quiet:  quiet,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
-	defer cancel()
-
 	var wg sync.WaitGroup
 	for _, url := range urls {
 		wg.Add(1)
 		go func(url string) {
 			defer wg.Done()
-			relayCtx, relayCancel := context.WithTimeout(ctx, 5*time.Second)
-			defer relayCancel()
+			// Use a context with timeout for the dial, but do NOT cancel it after
+			// connecting. The nostr library's connection goroutine monitors ctx.Done()
+			// and will close the websocket if the context is cancelled. Instead, we
+			// let the context expire naturally (the deadline is harmless once past).
+			connectCtx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 
-			relay, err := nostr.RelayConnect(relayCtx, url, nostr.RelayOptions{})
+			relay, err := nostr.RelayConnect(connectCtx, url, nostr.RelayOptions{})
 			if err != nil {
 				if !quiet {
 					fmt.Printf("   ⚠ %s (connect failed)\n", url)
