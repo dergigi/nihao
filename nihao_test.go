@@ -198,6 +198,12 @@ func TestParseSetupFlags(t *testing.T) {
 	if len(opts.mints) != 2 {
 		t.Errorf("mints = %v, want 2 items", opts.mints)
 	}
+
+	// Test --nsec alias
+	nsecOpts := parseSetupFlags([]string{"--nsec", "deadbeef2"})
+	if nsecOpts.sec != "deadbeef2" {
+		t.Errorf("--nsec alias: sec = %q, want %q", nsecOpts.sec, "deadbeef2")
+	}
 }
 
 func TestMarkedRelaysToTags(t *testing.T) {

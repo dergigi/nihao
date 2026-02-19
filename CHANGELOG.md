@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.11.3] - 2026-02-19
+
+### Added
+- **`--nsec` alias**: `--nsec` now works as an alias for `--sec` in setup (more intuitive flag name)
+- **Unknown flag detection**: All commands now error on unknown flags instead of silently ignoring them (e.g. `nihao --bogus` → `error: unknown flag: --bogus`)
+
 ## [0.11.2] - 2026-02-19
 
 ### Fixed

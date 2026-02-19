@@ -54,14 +54,17 @@ func main() {
 			var relays []string
 			for i := 1; i < len(args); i++ {
 				a := args[i]
-				if a == "--json" {
+				switch {
+				case a == "--json":
 					jsonOutput = true
-				} else if a == "--quiet" || a == "-q" {
+				case a == "--quiet" || a == "-q":
 					quiet = true
-				} else if a == "--relays" && i+1 < len(args) {
+				case a == "--relays" && i+1 < len(args):
 					i++
 					relays = strings.Split(args[i], ",")
-				} else if !strings.HasPrefix(a, "-") {
+				case strings.HasPrefix(a, "-"):
+					fatal("unknown flag: %s (see nihao help)", a)
+				default:
 					target = a
 				}
 			}
@@ -73,12 +76,15 @@ func main() {
 			var relays []string
 			for i := 1; i < len(args); i++ {
 				a := args[i]
-				if a == "--quiet" || a == "-q" {
+				switch {
+				case a == "--quiet" || a == "-q":
 					quiet = true
-				} else if a == "--relays" && i+1 < len(args) {
+				case a == "--relays" && i+1 < len(args):
 					i++
 					relays = strings.Split(args[i], ",")
-				} else if !strings.HasPrefix(a, "-") {
+				case strings.HasPrefix(a, "-"):
+					fatal("unknown flag: %s (see nihao help)", a)
+				default:
 					target = a
 				}
 			}
@@ -119,7 +125,7 @@ SETUP FLAGS:
   --no-dm-relays            Skip DM relay list publishing
   --json                    Output result as JSON
   --quiet, -q               Suppress non-JSON, non-error output
-  --sec <nsec|hex>          Use existing secret key instead of generating
+  --sec, --nsec <nsec|hex>  Use existing secret key instead of generating
   --stdin                   Read secret key from stdin (for piping)
   --nsec-cmd <command>      Pipe nsec to this command for secure storage
 
@@ -715,7 +721,7 @@ func parseSetupFlags(args []string) setupOpts {
 				opts.relays = strings.Split(args[i+1], ",")
 				i++
 			}
-		case "--sec":
+		case "--sec", "--nsec":
 			if i+1 < len(args) {
 				opts.sec = args[i+1]
 				i++
@@ -747,6 +753,11 @@ func parseSetupFlags(args []string) setupOpts {
 			}
 		case "--no-dm-relays":
 			opts.noDMRelays = true
+		default:
+			if strings.HasPrefix(args[i], "-") {
+				fatal("unknown flag: %s (see nihao help)", args[i])
+			}
+			// Ignore positional args (shouldn't happen in setup, but be safe)
 		}
 	}
 	return opts

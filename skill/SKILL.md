@@ -102,7 +102,7 @@ What this does:
 | `--no-dm-relays` | Skip DM relay list publishing |
 | `--mint <url>` | Custom Cashu mint (repeatable) |
 | `--no-wallet` | Skip wallet setup |
-| `--sec <nsec\|hex>` | Use existing secret key |
+| `--sec, --nsec <nsec\|hex>` | Use existing secret key |
 | `--stdin` | Read secret key from stdin |
 | `--nsec-cmd <command>` | Pipe nsec to this command for secure storage |
 | `--json` | JSON output for parsing |
