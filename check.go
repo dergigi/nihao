@@ -438,7 +438,9 @@ func connectCheckRelays(ctx context.Context) []checkRelay {
 }
 
 // fetchKindFrom queries already-connected relays for a specific kind.
-// Returns the first event found from any relay.
+// For replaceable events (kind 0, 3, 10002, etc.), different relays may hold
+// different versions. We collect results from all relays and return the one
+// with the latest created_at timestamp, which is the canonical version per NIP-01.
 func fetchKindFrom(ctx context.Context, relays []checkRelay, pk nostr.PubKey, kind int) (string, *nostr.Event) {
 	filter := nostr.Filter{
 		Authors: []nostr.PubKey{pk},
@@ -463,13 +465,18 @@ func fetchKindFrom(ctx context.Context, relays []checkRelay, pk nostr.PubKey, ki
 		}(cr)
 	}
 
+	var bestURL string
+	var bestEvt *nostr.Event
 	for range relays {
 		r := <-ch
 		if r.evt != nil {
-			return r.url, r.evt
+			if bestEvt == nil || r.evt.CreatedAt > bestEvt.CreatedAt {
+				bestURL = r.url
+				bestEvt = r.evt
+			}
 		}
 	}
-	return "", nil
+	return bestURL, bestEvt
 }
 
 func verifyNIP05(ctx context.Context, identifier string, expectedPK nostr.PubKey) bool {
