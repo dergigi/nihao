@@ -2,7 +2,7 @@
 
 ## Bugs / DX
 - [x] Unknown flags silently ignored — `--nsec` is a natural guess for `--sec`, should error or warn on unknown flags
-- [ ] Relay markers missing in kind 10002 — `check` flags "no read/write markers" even though setup publishes them; verify markers are set correctly
+- [x] Relay markers missing in kind 10002 — `check` flags "no read/write markers" even though setup publishes them; bare tags = read+write per NIP-65, not a problem
 
 ## Setup
 - [ ] NIP-05 setup assistance — help users configure `/.well-known/nostr.json` on their domain

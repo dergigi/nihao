@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.11.4] - 2026-02-19
+
+### Fixed
+- **Relay markers false warning**: `nihao check` no longer warns about "no read/write markers" when all relays are bare (no explicit marker). Per NIP-65, bare tags mean read+write — this is valid and common. Changed from warn to pass.
+
 ## [0.11.3] - 2026-02-19
 
 ### Added

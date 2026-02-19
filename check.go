@@ -198,7 +198,7 @@ func runCheck(target string, jsonOutput bool, quiet bool, relays []string) {
 		// Check NIP-65 read/write markers
 		if relayCount > 0 {
 			if allBare {
-				result.addCheck("relay_markers", "warn", fmt.Sprintf("all %d relays have no read/write markers — clients may not route DMs/replies correctly", relayCount))
+				result.addCheck("relay_markers", "pass", fmt.Sprintf("all %d relays are read+write (no dedicated read/write relays)", relayCount))
 			} else {
 				parts := []string{}
 				if readCount > 0 {
