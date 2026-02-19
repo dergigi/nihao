@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.11.2] - 2026-02-19
+
+### Fixed
+- **RelayPool context cancellation**: `NewRelayPool` was cancelling the connect context via `defer cancel()` after each goroutine returned, which triggered the nostr library's `ctx.Done()` handler and immediately closed all relay connections. All publishes would fail with `<closed>`. Fix: don't cancel the connect context — let the timeout expire naturally.
+- **Check command same bug**: `connectCheckRelays` had the identical `defer cancel()` pattern, causing `nihao check` to fail to fetch any events from relays.
+
 ## [0.11.1] - 2026-02-19
 
 ### Added
