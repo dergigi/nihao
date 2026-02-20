@@ -20,7 +20,7 @@ This skill installs a single Go binary (`nihao`) that:
 - **Connects to Nostr relays** — WebSocket connections to publish and query events
 
 It does **not**:
-- Store keys on disk (prints nsec to stdout; use `--nsec-cmd` to pipe to a secure store)
+- Store keys on disk (prints nsec to stdout; use `--nsec-file` to write to a file or `--nsec-cmd` to pipe to a command)
 - Run as a daemon or background process
 - Access local files beyond the binary itself
 - Require any accounts, API keys, or KYC
@@ -53,7 +53,13 @@ nihao --name "<AGENT_NAME>" --about "<AGENT_BIO>" --json --quiet
 
 Parse the JSON output to extract `npub`, `nsec`, `pubkey`, and `relays`.
 
-**⚠️ Store the nsec securely.** It cannot be recovered. Use `--nsec-cmd` to pipe it to a password manager:
+**⚠️ Store the nsec securely.** It cannot be recovered. Use `--nsec-file` to save it:
+
+```bash
+nihao --name "MyAgent" --nsec-file ./nsec.key --json
+```
+
+Or pipe to a password manager with `--nsec-cmd`:
 
 ```bash
 nihao --name "MyAgent" --nsec-cmd "pass insert -m nostr/nsec" --json
@@ -104,7 +110,8 @@ What this does:
 | `--no-wallet` | Skip wallet setup |
 | `--sec, --nsec <nsec\|hex>` | Use existing secret key |
 | `--stdin` | Read secret key from stdin |
-| `--nsec-cmd <command>` | Pipe nsec to this command for secure storage |
+| `--nsec-file <path>` | Write nsec to file (0600 perms) for secure storage |
+| `--nsec-cmd <command>` | Pipe nsec to shell command (alias: `--nsec-exec`) |
 | `--json` | JSON output for parsing |
 | `--quiet, -q` | Suppress non-JSON, non-error output |
 
@@ -117,7 +124,7 @@ nihao never writes keys to disk. Options:
 nihao --name "Bot" --json | jq -r .nsec
 
 # Pipe to password manager
-nihao --name "Bot" --nsec-cmd "pass insert -m nostr/agent"
+nihao --name "Bot" --nsec-file ./bot-nsec.key
 
 # Use existing key
 nihao --name "Bot" --sec nsec1...

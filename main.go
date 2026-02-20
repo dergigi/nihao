@@ -127,7 +127,8 @@ SETUP FLAGS:
   --quiet, -q               Suppress non-JSON, non-error output
   --sec, --nsec <nsec|hex>  Use existing secret key instead of generating
   --stdin                   Read secret key from stdin (for piping)
-  --nsec-cmd <command>      Pipe nsec to this command for secure storage
+  --nsec-file <path>        Write nsec to file (0600 perms) for secure storage
+  --nsec-cmd <command>      Pipe nsec to shell command (alias: --nsec-exec)
 
 CHECK FLAGS:
   --json                    Output result as JSON
@@ -185,6 +186,16 @@ func runSetup(args []string) {
 	pk := sk.Public()
 	nsec := nip19.EncodeNsec(sk)
 	npub := nip19.EncodeNpub(pk)
+
+	// Store nsec to file if requested
+	if opts.nsecFile != "" {
+		logln("🔐 Writing nsec to file...")
+		if err := writeNsecFile(opts.nsecFile, nsec); err != nil {
+			fatal("nsec-file failed: %s", err)
+		}
+		logln("   ✓ nsec written to " + opts.nsecFile)
+		logln()
+	}
 
 	// Store nsec via external command if requested
 	if opts.nsecCmd != "" {
@@ -677,6 +688,7 @@ type setupOpts struct {
 	quiet      bool
 	noWallet   bool
 	nsecCmd    string
+	nsecFile   string
 	discover   bool
 	dmRelays   []string
 	noDMRelays bool
@@ -739,9 +751,14 @@ func parseSetupFlags(args []string) setupOpts {
 			opts.quiet = true
 		case "--stdin":
 			opts.stdin = true
-		case "--nsec-cmd":
+		case "--nsec-cmd", "--nsec-exec":
 			if i+1 < len(args) {
 				opts.nsecCmd = args[i+1]
+				i++
+			}
+		case "--nsec-file":
+			if i+1 < len(args) {
+				opts.nsecFile = args[i+1]
 				i++
 			}
 		case "--discover":
@@ -777,6 +794,11 @@ func readStdin() string {
 		return scanner.Text()
 	}
 	return ""
+}
+
+// writeNsecFile writes the nsec to a file with 0600 permissions.
+func writeNsecFile(path string, nsec string) error {
+	return os.WriteFile(path, []byte(nsec+"\n"), 0600)
 }
 
 // runNsecCmd pipes the nsec to an external command via stdin.
