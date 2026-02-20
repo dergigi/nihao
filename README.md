@@ -40,7 +40,10 @@ echo $NSEC | nihao --stdin --name "satoshi"
 # Custom mints for your wallet
 nihao --mint https://mint.minibits.cash/Bitcoin --mint https://mint.coinos.io
 
-# Store your nsec securely via password manager
+# Store your nsec to a file (0600 perms)
+nihao --name "satoshi" --nsec-file ./nsec.key
+
+# Or pipe to a password manager
 nihao --name "satoshi" --nsec-cmd "pass insert -e nostr/satoshi"
 
 # Skip the wallet if you just need identity
@@ -86,7 +89,8 @@ relays from well-connected npubs.
 - [x] Mint validation (NUT-04, NUT-05, NUT-11, sat keyset)
 - [x] `--mint <url>` flag to override default mints
 - [x] `--no-wallet` flag to skip wallet setup
-- [x] `--nsec-cmd` for secure key storage via external command
+- [x] `--nsec-file` for AV-friendly key storage to file
+- [x] `--nsec-cmd` / `--nsec-exec` for secure key storage via external command
 - [x] `--discover` flag to find relays from well-connected npubs
 - [x] Relay kind filtering (specialized relays only get compatible events)
 - [x] NIP-65 read/write markers on kind 10002 relay list
@@ -125,9 +129,19 @@ relays from well-connected npubs.
 
 ## Key Management
 
-nihao does **not** store your nsec. By design, it generates (or accepts) a secret key, uses it to sign events, and then outputs it — but never writes it to disk.
+nihao does **not** store your nsec. By design, it generates (or accepts) a secret key, uses it to sign events, and then outputs it — but never writes it to disk unless you ask.
 
-Use `--nsec-cmd` to pipe the nsec to any storage backend:
+### Simple: write to file
+
+```bash
+nihao --name "satoshi" --nsec-file ./nsec.key
+```
+
+The file is created with `0600` permissions (owner read/write only). No shell execution involved.
+
+### Advanced: pipe to a password manager
+
+Use `--nsec-cmd` (or `--nsec-exec`) to pipe the nsec to any storage backend:
 
 ```bash
 # GNU pass (GPG-encrypted, git-friendly)

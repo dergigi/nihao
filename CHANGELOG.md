@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.12.0] - 2026-02-20
+
+### Added
+- **`--nsec-file <path>`**: Write nsec to a file with `0600` permissions — no shell execution, AV-friendly alternative to `--nsec-cmd`
+- **`--nsec-exec` alias**: Alternative flag name for `--nsec-cmd` (both work)
+
+### Changed
+- SKILL.md now recommends `--nsec-file` as the default key storage approach
+- `--nsec-cmd` still fully supported for power users who need shell pipes
+
 ## [0.11.4] - 2026-02-19
 
 ### Fixed
