@@ -25,7 +25,14 @@ It does **not**:
 - Access local files beyond the binary itself
 - Require any accounts, API keys, or KYC
 
+## Prerequisites
+
+- **Go 1.21+** — required to compile the binary from source. Check with `go version`.
+  - Install: https://go.dev/dl/ or via your package manager (`brew install go`, `apt install golang`, etc.)
+
 ## Install
+
+nihao is distributed as source code compiled locally via Go's standard toolchain. No pre-built binaries are downloaded — the code is fetched from GitHub, compiled on your machine, and placed in your `$GOPATH/bin`.
 
 ```bash
 go install github.com/dergigi/nihao@latest
@@ -33,7 +40,7 @@ go install github.com/dergigi/nihao@latest
 
 Verify: `nihao version`
 
-Requires Go 1.21+. No other dependencies.
+The source is fully auditable at https://github.com/dergigi/nihao.
 
 ## On Install
 
@@ -48,22 +55,12 @@ go install github.com/dergigi/nihao@latest
 ### Step 2: Create Identity
 
 ```bash
-nihao --name "<AGENT_NAME>" --about "<AGENT_BIO>" --json --quiet
+nihao --name "<AGENT_NAME>" --about "<AGENT_BIO>" --nsec-file ./nsec.key --json --quiet
 ```
 
-Parse the JSON output to extract `npub`, `nsec`, `pubkey`, and `relays`.
+This generates a keypair, publishes the identity, and securely writes the nsec to `./nsec.key` with `0600` permissions. Parse the JSON output to extract `npub`, `pubkey`, and `relays`.
 
-**⚠️ Store the nsec securely.** It cannot be recovered. Use `--nsec-file` to save it:
-
-```bash
-nihao --name "MyAgent" --nsec-file ./nsec.key --json
-```
-
-Or pipe to a password manager with `--nsec-cmd`:
-
-```bash
-nihao --name "MyAgent" --nsec-cmd "pass insert -m nostr/nsec" --json
-```
+**⚠️ The nsec cannot be recovered if lost.** Always use `--nsec-file` or `--nsec-cmd` to persist it securely.
 
 ### Step 3: Report to User
 
@@ -117,17 +114,23 @@ What this does:
 
 ### Key Management
 
-nihao never writes keys to disk. Options:
+nihao never writes keys to disk by default. Secret keys are handled securely:
+
+- **`--nsec-file <path>`** — writes nsec to a file with `0600` permissions (recommended for automation)
+- **`--nsec-cmd <command>`** — pipes nsec to a command's stdin (e.g., a password manager), never as a CLI argument
+- **`--stdin`** — reads an existing key from stdin, avoiding shell history and process list exposure
+- **`--json` output** — includes nsec in structured output for programmatic parsing
+
+⚠️ **Avoid passing raw nsec values as CLI arguments** (e.g., `--sec nsec1...`) in shared environments, as arguments are visible in process listings. Prefer `--stdin` or `--nsec-cmd` instead.
 
 ```bash
-# Generate and print (default)
-nihao --name "Bot" --json | jq -r .nsec
+# Generate and save securely
+nihao --name "Bot" --nsec-file ./bot-nsec.key --json
 
 # Pipe to password manager
-nihao --name "Bot" --nsec-file ./bot-nsec.key
+nihao --name "Bot" --nsec-cmd "pass insert -m nostr/nsec" --json
 
-# Use existing key
-nihao --name "Bot" --sec nsec1...
+# Use existing key via stdin (avoids process list exposure)
 echo "$NSEC" | nihao --name "Bot" --stdin
 ```
 
@@ -232,6 +235,14 @@ After setup, store for quick reference:
 ### Periodic Health Check
 
 Run `nihao check <npub> --json --quiet` on a schedule to monitor identity health. Parse the JSON and alert if score drops.
+
+## Security
+
+- **No pre-built binaries** — nihao is compiled from source on your machine via `go install`. The source is public and auditable.
+- **No key storage** — nihao does not persist keys unless explicitly told to via `--nsec-file` or `--nsec-cmd`.
+- **No network exfiltration** — the only network connections are to Nostr relays (WebSocket), NIP-05/LNURL endpoints (HTTPS), and Cashu mints (HTTPS). No telemetry, no analytics, no phoning home.
+- **Stdin-first key input** — when using an existing key, prefer `--stdin` over `--sec` to avoid process list exposure.
+- **File permissions** — `--nsec-file` writes with `0600` (owner read/write only).
 
 ## Defaults
 
