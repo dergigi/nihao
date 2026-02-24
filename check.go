@@ -280,7 +280,25 @@ func runCheck(target string, jsonOutput bool, quiet bool, relays []string) {
 			}
 		}
 		if len(dmRelayURLs) > 0 {
-			result.addCheck("dm_relays", "pass", fmt.Sprintf("%d DM relay(s): %s", len(dmRelayURLs), strings.Join(dmRelayURLs, ", ")))
+			// Score DM relays for reachability
+			dmScores := ScoreRelays(dmRelayURLs)
+			reachable := 0
+			var unreachableDM []string
+			for _, rs := range dmScores {
+				if rs.Reachable {
+					reachable++
+				} else {
+					unreachableDM = append(unreachableDM, rs.URL)
+				}
+			}
+			detail := fmt.Sprintf("%d DM relay(s): %s", len(dmRelayURLs), strings.Join(dmRelayURLs, ", "))
+			if reachable == len(dmRelayURLs) {
+				result.addCheck("dm_relays", "pass", detail)
+			} else if reachable > 0 {
+				result.addCheck("dm_relays", "warn", fmt.Sprintf("%s — %d unreachable: %s", detail, len(unreachableDM), strings.Join(unreachableDM, ", ")))
+			} else {
+				result.addCheck("dm_relays", "fail", fmt.Sprintf("%s — all unreachable!", detail))
+			}
 		} else {
 			result.addCheck("dm_relays", "warn", "kind 10050 found but no relay tags")
 		}

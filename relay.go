@@ -439,11 +439,10 @@ func DefaultMarkedRelays() []MarkedRelay {
 	}
 }
 
-// DefaultDMRelays returns good DM inbox relays for kind 10050
-var DefaultDMRelays = []string{
-	"wss://inbox.nostr.wine",
-	"wss://auth.nostr1.com",
-}
+// DefaultDMRelays is nil — when no --dm-relays are specified, nihao uses the
+// same relays as kind 10002 (general relay list). This avoids the problem of
+// defaulting to paid relays that the user can't read from.
+var DefaultDMRelays []string
 
 // ClassifyDiscoveredRelay assigns a NIP-65 marker to a discovered relay
 func ClassifyDiscoveredRelay(url string) (MarkedRelay, bool) {
