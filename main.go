@@ -348,7 +348,7 @@ func runSetup(args []string) {
 
 	// Step 4b: Publish DM relay list (kind 10050) per NIP-17
 	if !opts.noDMRelays {
-		dmRelays := DefaultDMRelays
+		var dmRelays []string
 		if opts.dmRelays != nil {
 			dmRelays = opts.dmRelays
 		} else if opts.discover {
@@ -357,6 +357,10 @@ func runSetup(args []string) {
 			if len(discovered) > 0 {
 				dmRelays = discovered
 			}
+		}
+		// Default: use the same relays as kind 10002 (excluding outbox-only relays)
+		if len(dmRelays) == 0 {
+			dmRelays = MarkedRelayURLs(markedRelays)
 		}
 
 		var dmTags nostr.Tags
