@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.12.1] - 2026-02-24
+
+### Fixed
+- **DM relay defaults**: Kind 10050 DM relay list now defaults to the same relays as kind 10002 instead of hardcoded paid relays (`inbox.nostr.wine`, `auth.nostr1.com`) that users can't read from
+- **DM relay reachability check**: `nihao check` now tests DM relay reachability and warns about unreachable relays
+
 ## [0.12.0] - 2026-02-20
 
 ### Added
