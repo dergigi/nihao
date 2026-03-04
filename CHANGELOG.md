@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.12.2] - 2026-03-04
+
+### Changed
+- **Default DM relays**: Added `wss://nip17.com` (NIP-17 specialized relay) as primary DM relay, along with general-purpose relays (damus, primal, nos.lol)
+
+### Added
+- **OpenClaw skill documentation**: Added OpenClaw/ClawHub section to README
+
 ## [0.12.1] - 2026-02-24
 
 ### Fixed
