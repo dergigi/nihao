@@ -249,7 +249,7 @@ Run `nihao check <npub> --json --quiet` on a schedule to monitor identity health
 | Setting | Value |
 |---------|-------|
 | Relays | relay.damus.io, relay.primal.net, nos.lol, purplepag.es |
-| DM relays | inbox.nostr.wine, auth.nostr1.com |
+| DM relays | nip17.com, relay.damus.io, relay.primal.net, nos.lol |
 | Lightning | `<npub>@npub.cash` |
 | Mints | minibits, coinos, macadamia |
 | Wallet kind | 17375 (NIP-60) |
