@@ -75,8 +75,10 @@ New identities publish a kind 10002 relay list with proper NIP-65 read/write mar
 
 DM relays (kind 10050, per NIP-17):
 
-- `wss://inbox.nostr.wine` — auth-required inbox relay
-- `wss://auth.nostr1.com` — auth-required inbox relay
+- `wss://nip17.com` — NIP-17 specialized relay
+- `wss://relay.damus.io` — read+write (general-purpose)
+- `wss://relay.primal.net` — read+write (general-purpose)
+- `wss://nos.lol` — read+write (general-purpose)
 
 Override with `--relays`, `--dm-relays`, or use `--discover` to automatically find
 relays from well-connected npubs.

@@ -42,6 +42,16 @@ var defaultRelays = []string{
 	"wss://purplepag.es",
 }
 
+// Default DM relays (kind 10050, per NIP-17)
+// nip17.com — NIP-17 specialized relay
+// General relays also work well for DMs
+var defaultDMRelays = []string{
+	"wss://nip17.com",
+	"wss://relay.damus.io",
+	"wss://relay.primal.net",
+	"wss://nos.lol",
+}
+
 func main() {
 	args := os.Args[1:]
 
@@ -358,9 +368,9 @@ func runSetup(args []string) {
 				dmRelays = discovered
 			}
 		}
-		// Default: use the same relays as kind 10002 (excluding outbox-only relays)
+		// Default: use dedicated DM relay list (includes nip17.com)
 		if len(dmRelays) == 0 {
-			dmRelays = MarkedRelayURLs(markedRelays)
+			dmRelays = defaultDMRelays
 		}
 
 		var dmTags nostr.Tags
