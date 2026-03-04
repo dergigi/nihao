@@ -54,6 +54,16 @@ nihao check npub1...
 nihao check npub1... --json
 ```
 
+## OpenClaw Skill
+
+nihao is available as an [OpenClaw](https://openclaw.ai) skill for AI agents. Install it from [ClawHub](https://clawhub.ai/dergigi/nihao):
+
+```bash
+clawhub install dergigi/nihao
+```
+
+Agents can then use `/nihao` commands to create and audit Nostr identities programmatically.
+
 ## Default Relays
 
 New identities publish a kind 10002 relay list with proper NIP-65 read/write markers:
