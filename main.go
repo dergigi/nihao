@@ -125,6 +125,7 @@ USAGE:
 SETUP FLAGS:
   --name <name>             Display name
   --about <text>            About/bio text
+  --bot                     Self-identify as a bot (NIP-24)
   --picture <url>           Profile picture URL
   --banner <url>            Banner image URL
   --nip05 <user@domain>     NIP-05 identifier
@@ -229,6 +230,7 @@ func runSetup(args []string) {
 	profile := ProfileMetadata{
 		Name:        name,
 		DisplayName: name,
+		Bot:         opts.bot,
 	}
 	if opts.about != "" {
 		profile.About = opts.about
@@ -676,6 +678,7 @@ type ProfileMetadata struct {
 	NIP05       string `json:"nip05,omitempty"`
 	LUD16       string `json:"lud16,omitempty"`
 	Website     string `json:"website,omitempty"`
+	Bot         bool   `json:"bot,omitempty"`
 }
 
 type SetupResult struct {
@@ -689,6 +692,7 @@ type SetupResult struct {
 
 type setupOpts struct {
 	name       string
+	bot        bool
 	about      string
 	picture    string
 	banner     string
@@ -712,6 +716,8 @@ func parseSetupFlags(args []string) setupOpts {
 	opts := setupOpts{}
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
+		case "--bot":
+			opts.bot = true
 		case "--name":
 			if i+1 < len(args) {
 				opts.name = args[i+1]

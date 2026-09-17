@@ -33,6 +33,9 @@ go install github.com/dergigi/nihao@latest
 # One command. Full identity. No questions asked.
 nihao --name "satoshi" --json
 
+# Identify an automated account as a bot (NIP-24)
+nihao --name "my-bot" --bot --json
+
 # Bring your own key
 nihao --sec nsec1... --name "satoshi"
 echo $NSEC | nihao --stdin --name "satoshi"
@@ -89,6 +92,7 @@ relays from well-connected npubs.
 
 - [x] Generate keypair (or use `--sec` / `--stdin`)
 - [x] Publish profile metadata (kind 0)
+- [x] `--bot` to self-identify as a bot (NIP-24)
 - [x] Publish relay list (kind 10002)
 - [x] Publish follow list (kind 3)
 - [x] Post first note (kind 1) with `#nihao` hashtag
@@ -191,10 +195,14 @@ The command receives the nsec on **stdin** (one line, followed by EOF). It runs 
 
 ### For Agents
 
+Use `--bot` to include `"bot": true` in kind 0 profile metadata and the JSON
+profile output, as defined by [NIP-24](https://github.com/nostr-protocol/nips/blob/master/24.md).
+Without this flag, the optional `bot` field is omitted.
+
 Agents should always use `--nsec-cmd` (or `--json` and handle storage themselves). Example with `pass`:
 
 ```bash
-nihao --name "my-bot" --json --nsec-cmd "pass insert -e nostr/my-bot"
+nihao --name "my-bot" --bot --json --nsec-cmd "pass insert -e nostr/my-bot"
 ```
 
 The nsec is stored *before* any events are published, so if storage fails, no identity is created on relays.
